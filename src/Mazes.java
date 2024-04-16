@@ -1,7 +1,5 @@
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
+import java.util.*;
+
 import javalib.worldimages.*;
 import java.awt.Color;
 import tester.*;
@@ -183,8 +181,8 @@ class Tile implements ITile{
 
 class Edge {
   
-  private final Tile topLeft;
-  private final Tile botRight; 
+  protected final Tile topLeft;
+  protected final Tile botRight;
   private final int weight;
 
   Edge(Tile topLeft, Tile botRight, int weight) {
@@ -231,11 +229,21 @@ class Maze {
   private final int width;
   private final int height;
   private final int tileSize;
+
   private final ArrayList<ArrayList<Tile>> grid;
   private final ArrayList<Tile> shortestPath;
+  //manual movement
   private int xPos;
   private int yPos;
-  
+
+  //private ArrayList<ArrayList<Integer>> heatMap; //lower times means faster to get to
+  private HashMap<Tile, Boolean> gridVisited;
+  private final Stack<Tile> workListDFS;
+  //private final Queue<Tile> workListBFS;
+  private Tile currTile;
+  private HashMap<Tile, ArrayList<Tile>> adjList;
+
+
   Maze(int width, int height, int tileSize) {
     if (width > 100 || width < 0) {
       throw new IllegalArgumentException("Width must be between 0 and 100");
@@ -253,6 +261,11 @@ class Maze {
     this.grid.get(0).get(0).moveTo();
     this.shortestPath = new ArrayList<Tile>();
     this.shortestPath.add(grid.get(0).get(0));
+    this.gridVisited = this.formulateVisitedList();
+    this.workListDFS = new Stack<>();
+    this.workListDFS.push(grid.get(0).get(0));
+    this.currTile = this.grid.get(0).get(0);
+    this.adjList = getMSTNodes();
   }
   
   Maze(ArrayList<ArrayList<Tile>> grid) {
@@ -272,6 +285,20 @@ class Maze {
     this.grid.get(0).get(0).moveTo();
     this.shortestPath = new ArrayList<Tile>();
     this.shortestPath.add(grid.get(0).get(0));
+    this.gridVisited = this.formulateVisitedList();
+    this.workListDFS = new Stack<>();
+    this.workListDFS.push(grid.get(0).get(0));
+    this.currTile = this.grid.get(0).get(0);
+  }
+
+  HashMap<Tile, Boolean> formulateVisitedList() {
+    HashMap<Tile, Boolean> visited = new HashMap<>();
+    for (ArrayList<Tile> al : this.grid) {
+      for (Tile t : al) {
+        visited.put(t, false);
+      }
+    }
+    return visited;
   }
   
   ArrayList<ArrayList<Tile>> buildTiles() {
@@ -413,9 +440,99 @@ class Maze {
       }
     }
   }
+
+  //simply does dfs, no timer for heatmap (different method)
+  //may just turn this into getHeatMap
+ /* void getHeatMap() {
+    this.grid.get(yPos).get(xPos).moveFrom();
+    this.gridVisited.get(this.yPos).set(this.xPos, true);
+    if (this.grid.get(this.yPos).get(this.xPos).canMove("down")
+    && !this.gridVisited.get(this.yPos + 1).get(this.xPos)) {
+      this.yPos += 1;
+      this.grid.get(this.yPos).get(xPos).moveTo();
+      this.dfs();
+      this.yPos -= 1;
+    }
+
+    if (this.grid.get(this.yPos).get(this.xPos).canMove("right")
+    && !this.gridVisited.get(this.yPos).get(this.xPos + 1)) {
+      this.xPos += 1;
+      this.grid.get(this.yPos).get(xPos).moveTo();
+      this.dfs();
+      this.xPos -= 1;
+    }
+
+    if (this.grid.get(this.yPos).get(this.xPos).canMove("up")
+    && !this.gridVisited.get(this.yPos - 1).get(this.xPos)) {
+      this.yPos -= 1;
+      this.grid.get(this.yPos).get(xPos).moveTo();
+      this.dfs();
+      this.yPos += 1;
+    }
+
+    if (this.grid.get(this.yPos).get(this.xPos).canMove("left")
+    && !this.gridVisited.get(this.yPos).get(this.xPos - 1)) {
+      this.xPos -= 1;
+      this.grid.get(this.yPos).get(xPos).moveTo();
+      this.dfs();
+      this.xPos += 1;
+    }
+  }*/
+
+  void dfs(int tick) {
+    if (tick % 2 == 0) {
+      while (this.gridVisited.get(this.workListDFS.peek())) {
+        this.workListDFS.pop();
+      }
+
+      this.currTile = this.workListDFS.pop();
+      this.gridVisited.put(this.currTile, true);
+      this.currTile.moveTo();
+
+      for (Tile t : this.adjList.get(this.currTile)) {
+        this.workListDFS.push(t);
+      }
+    } else {
+      this.currTile.moveFrom();
+    }
+  }
+
+  HashMap<Tile, ArrayList<Tile>> getMSTNodes() {
+    HashMap<Tile, ArrayList<Tile>> adjList = new HashMap<>();
+    ArrayList<Edge> edgesInMST = this.buildTree();
+    //initializing all arrayLists
+    for (int row = 0; row < this.grid.size(); row += 1) {
+      for (int col = 0; col < this.grid.get(0).size(); col += 1) {
+        adjList.put(this.grid.get(row).get(col), new ArrayList<>());
+      }
+    }
+
+    for (Edge e : edgesInMST) {
+      adjList.get(e.topLeft).add(e.botRight);
+      adjList.get(e.botRight).add(e.topLeft);
+    }
+    return adjList;
+  }
+
+  int getRowIndex() {
+    int rowIndex = 0;
+    for (int index = 0; index < this.grid.size(); index += 1) {
+      if (this.grid.get(index).contains(this.currTile)) {
+        rowIndex = index;
+        break;
+      }
+    }
+    return rowIndex;
+  }
+
+  int getColIndex(int rowIndex) {
+    return this.grid.get(rowIndex).indexOf(this.currTile);
+  }
   
   boolean won() {
-    return this.xPos == this.width - 1 && this.yPos == this.height - 1;
+    return (this.xPos == this.width - 1 && this.yPos == this.height - 1)
+            || this.currTile.equals(this.grid.get(this.grid.size() - 1)
+            .get(this.grid.get(0).size() - 1));
   }
   
   void showShortestPath() {
@@ -431,12 +548,16 @@ class Game extends World {
   private int width;
   private int height;
   private int tileSize;
+  private String mode;
+  private int tick;
   
   Game(int width, int height) {
     this.tileSize = Math.min(1400 / width, 700 / height);
     this.maze = new Maze(width, height, this.tileSize);
     this.width = width * this.tileSize;
     this.height = height * this.tileSize;
+    this.mode = "manual";
+    this.tick = 0;
   }
   
   public WorldScene makeScene() {
@@ -447,7 +568,22 @@ class Game extends World {
   }
   
   public void onKeyEvent(String key) {
-    this.maze.move(key);
+    if (key.equals("1")) {
+      this.mode = "dfs";
+    } else if (key.equals("2")) {
+     // this.maze.bfs();
+    } else if (key.equals("3")) {
+      this.mode = "manual";
+    } else {
+      this.maze.move(key);
+    }
+  }
+
+  public void onTick() {
+    if (this.mode.equals("dfs")) {
+      this.maze.dfs(this.tick);
+      this.tick += 1;
+    }
   }
   
   public boolean shouldWorldEnd() {
@@ -465,10 +601,10 @@ class Game extends World {
 }
 
 class ExamplesMazes {
-  Game m = new Game(5, 5);
+  Game m = new Game(10, 10);
   
   void testStuff(Tester t) {
-    m.bigBang(1500, 800, 0.1);
+    m.bigBang(1500, 800, .1);
   }
   
 
