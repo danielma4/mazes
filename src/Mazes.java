@@ -12,28 +12,33 @@ interface ITile {
 
 //represents an abstract Tile in a maze
 abstract class ATile implements ITile {
-  //access needed for rendering
-  //we also need to change tileColors when creating a heat map
+  //All fields are protected for use in render methods of subclasses
   protected final Color tileColor;
+  //Not final because heatColor changes depending on whether it is measured from the start or end
   protected Color heatColor;
+  //Not final because all tiles start out neither visited nor visiting, and update to true as the user
+  // or search algorithm process them
   protected boolean visited;
   protected boolean visiting;
   
+  // Creates a tile of the given color
   ATile(Color tileColor) {
     this.tileColor = tileColor;
     this.visiting = false;
     this.visited = false;
   }
   
+  // Creates a tile with the default tile color
   ATile() {
     this.tileColor = ITile.TILE_COLOR;
   }
   
+  // Sets the heat color to the given color
   void setHeat(Color color) {
     this.heatColor = color;
   }
   
-  //finds the Tile representative of this ATile
+  //finds the deepest Tile representative of this ATile
   ATile findRep(HashMap<ATile, ATile> reps) {
     ATile rep = reps.get(this);
     if (rep.equals(this)) {
@@ -56,33 +61,42 @@ abstract class ATile implements ITile {
     throw new IllegalArgumentException("Incompatible tile types.");
   }
 
-  //mutates this ATile's color to indicate current Tile
+  //mutates this ATile's visiting field to true, to show that it is currently being processed.
   void moveTo() {
     this.visiting = true;
   }
 
-  //mutates this ATile's color to indicate that it's been visited
+  //mutates this ATile's visiting field to false, and visited field to true, to show that it has been processed.
   void moveFrom() { 
     this.visiting = false;
     this.visited = true;
   }
   
+  //Sets both the visiting and visited fields of this tile to false
   void resetVistStatus() {
     this.visited = false;
     this.visiting = false;
   }
-
+  
+  // Renders this tile in the given size, with the color given by:
+  // visiting > visited (if showVisited) > heatColor (if heatMode) > tileColor
   abstract WorldImage render(int tileSize, boolean heatMode, boolean showVisited);
   
+  // Checks if this tile does not have a wall in the given direction
   abstract boolean canMove(String direction);
   
+  // Returns an ArrayList<ATile> containing this tile's neighbors that are not separated by a wall
   abstract ArrayList<ATile> accessibleNeighbors();
   
+  // Assigns this tile's neighbors to be the neighboring indices of the given grid, at the given position
   abstract void assignNeighbors(ArrayList<ArrayList<ATile>> grid, int rowPos, int colPos);
   
+  // Appends half of this tile's neighbors as edges to the given ArrayList, width the edges created in accordance
+  // with the given bias. The edges created represent the lower and right neighbors of this tile
   abstract void appendHalfEdges(ArrayList<Edge> edges, boolean vertBias, boolean horzBias);
 }
 
+// Represents a tile in a Rectangular maze
 class RectTile extends ATile{
   //these fields are not final because we need to break them when making the maze
   private boolean upWall;
@@ -90,12 +104,13 @@ class RectTile extends ATile{
   private boolean rightWall;
   private boolean leftWall;
 
-  //fields are cyclic and therefore need mutation
+  //Not final because these fields are cyclic and therefore need mutation
   private ATile up;
   private ATile down;
   private ATile right;
   private ATile left;
-
+  
+  // Creates a RectTile with the given walls, neighbors, and color
   RectTile(boolean upWall, boolean downWall, boolean rightWall, boolean leftWall,
       RectTile up, RectTile down, RectTile right, RectTile left, Color tileColor) {
     super(tileColor);
@@ -104,12 +119,16 @@ class RectTile extends ATile{
     this.rightWall = rightWall;
     this.leftWall = leftWall;
     this.up = up;
+    up.setDown(this);
     this.down = down;
+    down.setUp(this);
     this.right = right;
+    right.setLeft(this);
     this.left = left;
+    left.setRight(this);
   }
 
-  //sets this RectTile's neighbors to null
+  //Creates a RectTile witht the given walls and color, and the neighbors set to null
   RectTile(boolean upWall, boolean downWall, boolean rightWall, boolean leftWall, Color tileColor) {
     super(tileColor);
     this.upWall = upWall;
@@ -122,37 +141,38 @@ class RectTile extends ATile{
     this.left = null;
   }
 
-  //sets this RectTile's walls to true
+  // Creates a RectTile of the given color, with all walls set to true and neighbors set to null
   RectTile(Color tileColor) {
     this(true, true, true, true, tileColor);
   }
 
-  //sets this RectTile's wall to true and this color to a default color
+  // Creates a RectTile of the default color, with all walls set to true and neighbors set to null
   RectTile() {
     this(true, true, true, true, ITile.TILE_COLOR);
   }
 
-  //sets this RectTile's up field to RectTile up
+  //sets this RectTile's up field to ATile up
   void setUp(ATile up) {
     this.up = up;
   }
 
-  //sets this RectTile's down field to RectTile down
+  //sets this RectTile's down field to ATile down
   void setDown(ATile down) {
     this.down = down;
   }
 
-  //sets this RectTile's right field to RectTile right
+  //sets this RectTile's right field to ATile right
   void setRight(ATile right) {
     this.right = right;
   }
 
-  //sets this RectTile's left field to RectTile left
+  //sets this RectTile's left field to ATile left
   void setLeft(ATile left) {
     this.left = left;
   }
 
-  //renders this RectTile as a WorldImage
+  //renders this RectTile as a square of the given size, with the color given by:
+  // visiting > visited (if showVisited) > heatColor (if heatMode) > tileColor
   WorldImage render(int size, boolean heatMode, boolean showVisited) {
     Color renderColor;
     if (this.visiting) {
@@ -243,7 +263,7 @@ class RectTile extends ATile{
     this.leftWall = false;
   }
 
-  //determines if this RectTile can move in a given direction
+  //determines if there is not a wall in the given direction from this RectTile
   boolean canMove(String direction) {
     switch (direction) {
       case "w":
@@ -263,7 +283,7 @@ class RectTile extends ATile{
     }
   }
 
-  //finds all the RectTile's which this RectTile can access
+  //finds all the neighboring tiles that are not separated by a wall
   ArrayList<ATile> accessibleNeighbors() {
     ArrayList<ATile> neighbors = new ArrayList<ATile>();
     if (!this.leftWall && this.left != null) {
@@ -281,6 +301,7 @@ class RectTile extends ATile{
     return neighbors;
   }
   
+  // Assigns this tile's neighbors to be the neighboring indices of the given grid, at the given position
   void assignNeighbors(ArrayList<ArrayList<ATile>> grid, int rowPos, int colPos) {
     if (rowPos != 0) {
       this.setUp(grid.get(rowPos - 1).get(colPos));
@@ -296,6 +317,8 @@ class RectTile extends ATile{
     }
   }
   
+  // Appends this tile's right and down neighbors as edges to the given ArrayList,
+  // with the edges created in accordance with the given bias.
   void appendHalfEdges(ArrayList<Edge> edges, boolean vertBias, boolean horzBias) {
     if (this.right != null) {
       edges.add(new Edge(this, this.right, horzBias));
@@ -306,8 +329,9 @@ class RectTile extends ATile{
   }
 }
 
-//represents a Hexagonal Tile in a maze
+//represents a tile in a Hexagonal maze
 class HexTile extends ATile{
+  
   //these fields are not final because they need to be broken for maze creation
   private boolean leftWall;;
   private boolean rightWall;
@@ -315,6 +339,7 @@ class HexTile extends ATile{
   private boolean rightDownWall;
   private boolean leftUpWall;
   private boolean leftDownWall;
+  
   //these fields are not final because this data is cyclic and needs to be mutated
   private ATile left;
   private ATile right;
@@ -323,6 +348,7 @@ class HexTile extends ATile{
   private ATile leftUp;
   private ATile leftDown;
   
+  // Creates a HexTile with the given walls, neighbors, and color
   HexTile(boolean leftWall, boolean rightWall, boolean rightUpWall,
       boolean rightDownWall, boolean leftUpWall, boolean leftDownWall,
       HexTile left, HexTile right, HexTile rightUp, HexTile rightDown,
@@ -335,14 +361,20 @@ class HexTile extends ATile{
     this.leftUpWall = leftUpWall;
     this.leftDownWall = leftDownWall;
     this.left = left;
+    left.setRight(this);
     this.right = right;
+    right.setLeft(this);
     this.rightUp = rightUp;
+    rightUp.setLeftDown(this);
     this.rightDown = rightDown;
+    rightDown.setLeftUp(this);
     this.leftUp = leftUp;
+    leftUp.setRightDown(this);
     this.leftDown = leftDown;
+    leftDown.setRightUp(this);
   }
 
-  //sets this HexTile's neighbors to null
+  // Creates a HexTile with the given walls and color, and neighbors set to null
   HexTile(boolean leftWall, boolean rightWall, boolean rightUpWall,
       boolean rightDownWall, boolean leftUpWall, boolean leftDownWall, Color tileColor) {
     super(tileColor);
@@ -360,12 +392,12 @@ class HexTile extends ATile{
     this.leftDown = null;
   }
 
-  //sets this HexTile's walls to true
+  // Creates a HexTile of the given color, with all walls set to true and neighbors set to null
   HexTile(Color tileColor) {
     this(true, true, true, true, true, true, tileColor);
   }
 
-  //sets this HexTile's walls to true and the color to a default color
+  // Creates a HexTile of the default color, with all walls set to true and neighbors set to null
   HexTile() {
     this(true, true, true, true, true, true, ITile.TILE_COLOR);
   }
@@ -400,7 +432,8 @@ class HexTile extends ATile{
     this.leftDown = leftDown;
   }
 
-  //renders this HexTile as a WorldImage
+  //renders this RectTile as a hexagon of the given size, with the color given by:
+  // visiting > visited (if showVisited) > heatColor (if heatMode) > tileColor
   WorldImage render(int sideLength, boolean heatMode, boolean showVisited) {
     Color renderColor;
     if (this.visiting) {
@@ -522,7 +555,7 @@ class HexTile extends ATile{
     this.leftDownWall = false;
   }
 
-  //determines if this HexTile has access to the HexTile in a given direction
+  //determines if there is not a wall in the given direction
   boolean canMove(String direction) {
     switch (direction) {
       case "a":
@@ -542,7 +575,7 @@ class HexTile extends ATile{
     }
   }
 
-  //gathers all HexTiles which this HexTile has immediate access to
+  //finds all the neighboring tiles that are not separated by a wall
   ArrayList<ATile> accessibleNeighbors() {
     ArrayList<ATile> neighbors = new ArrayList<ATile>();
     if (!this.rightUpWall && this.rightUp != null) {
@@ -566,6 +599,7 @@ class HexTile extends ATile{
     return neighbors;
   }
   
+  // Assigns this tile's neighbors to be the neighboring indices of the given grid, at the given position
   void assignNeighbors(ArrayList<ArrayList<ATile>> grid, int rowPos, int colPos) {
     if (colPos != 0) {
       this.setLeft(grid.get(rowPos).get(colPos - 1));
@@ -603,6 +637,8 @@ class HexTile extends ATile{
     }
   }
   
+  // Appends this tile's right, rightDown, and leftDown neighbors as edges to the given ArrayList,
+  // with the edges created in accordance with the given bias.
   void appendHalfEdges(ArrayList<Edge> edges, boolean diagBias, boolean horzBias) {
     if (this.right != null) {
       edges.add(new Edge(this, this.right, horzBias));
@@ -623,13 +659,14 @@ class Edge {
   private final ATile tile2; 
   private final int weight;
 
+  // Creates an edge between the given tiles with the given weights
   Edge(ATile tile1, ATile tile2, int weight) {
     this.tile1 = tile1;
     this.tile2 = tile2;
     this.weight = weight;
   }
   
-  //randomly sets weights of edges, biased towards lower weights if bias == true
+  //randomly sets the weight of this edge, biased towards lower weights if bias == true
   Edge(ATile tile1, ATile tile2, boolean bias) {
     this.tile1 = tile1;
     this.tile2 = tile2;
@@ -640,7 +677,7 @@ class Edge {
     }
   }
 
-  //randomly sets weights of edges
+  //randomly sets the weight of this edge
   Edge(ATile tile1, ATile tile2) {
     this.tile1 = tile1;
     this.tile2 = tile2;
@@ -663,7 +700,7 @@ class Edge {
     return Integer.compare(thatWeight, this.weight);
   }
 
-  //determines if the ATiles connected by this Edge have the same represetatives
+  //determines if the ATiles connected by this Edge have the same representatives
   boolean sameReps(HashMap<ATile, ATile> reps) {
     return this.tile1.findRep(reps).equals(this.tile2.findRep(reps));
   }
@@ -687,19 +724,21 @@ abstract class AMaze {
   
   private final TileUtils utils;
   private final int height;
-  protected final int tileSize;
   private final int firstRowWidth;
-  protected final ArrayList<ArrayList<ATile>> grid;
   private final ArrayList<Edge> tree;
-  private boolean inConstruction;
   private final ArrayList<ATile> shortestPath;
   private final ArrayList<ATile> workList;
   private final ArrayList<ATile> seenList;
+  // Protected due to subclasses needing the grid for rendering and the stickLeft algorithm
+  protected final ArrayList<ArrayList<ATile>> grid;
+  // protected due to subclasses needing the size for rendering
+  protected final int tileSize;
   //changes when the maze has been solved
   private boolean hasWon;
   //the x and y positions are changing with the current position
   protected int colPos;
   protected int rowPos;
+  private boolean inConstruction;
   protected boolean heatMode;
   protected boolean showPath;
   //changes as walls are encountered
