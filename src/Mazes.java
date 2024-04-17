@@ -1588,6 +1588,145 @@ class ExamplesMazes {
     return testSettingAndBreakingAndCanMove && checkExceptions && testAccessibleNeighbors;
   }
 
+  boolean EdgeAndWeightComparator(Tester t) {
+    RectTile middle = new RectTile();
+    RectTile left = new RectTile(Color.RED);
+    RectTile right = new RectTile();
+    RectTile up = new RectTile();
+    RectTile down = new RectTile();
+
+    middle.setUp(up);
+    up.setDown(middle);
+    middle.setLeft(left);
+    left.setRight(middle);
+    middle.setRight(right);
+    right.setLeft(middle);
+    middle.setDown(down);
+    down.setUp(middle);
+
+    HashMap<ATile, ATile> reps = new HashMap<>();
+    reps.put(middle, middle);
+    reps.put(left, left);
+    reps.put(right, middle);
+    reps.put(up, right);
+    reps.put(down, down);
+
+    Edge e1 = new Edge(right, middle, 10);
+    Edge e2 = new Edge(left, middle, 5);
+    Edge e3 = new Edge(right, up, 5);
+
+    e1.breakEdge();
+    e2.breakEdge();
+
+    boolean testBreakEdge = t.checkExpect(right.canMove("left"),
+            true)
+            && t.checkExpect(middle.canMove("right"),
+            true)
+            && t.checkExpect(left.canMove("right"),
+            true)
+            && t.checkExpect(middle.canMove("left"),
+            true)
+            && t.checkExpect(middle.canMove("up"),
+            false);
+
+    boolean testCompareWeight = t.checkExpect(e1.compareWeight(e2),
+            1)
+            && t.checkExpect(e2.compareWeight(e1),
+            -1)
+            && t.checkExpect(e2.compareWeight(e3),
+            0);
+
+    boolean testFind = t.checkExpect(e1.sameReps(reps),
+            true)
+            && t.checkExpect(e2.sameReps(reps),
+            false);
+
+    e2.unionReps(reps);
+
+    boolean testUnion = t.checkExpect(e2.sameReps(reps),
+            true);
+
+    HexTile mid = new HexTile();
+    HexTile l = new HexTile();
+    HexTile r = new HexTile();
+    HexTile rightup = new HexTile();
+    HexTile rightdown = new HexTile();
+    HexTile leftup = new HexTile();
+    HexTile leftdown = new HexTile();
+
+    mid.setLeft(l);
+    l.setRight(mid);
+    mid.setLeftUp(leftup);
+    leftup.setRightDown(mid);
+    mid.setLeftDown(leftdown);
+    leftdown.setRightUp(mid);
+    mid.setRight(r);
+    r.setLeft(mid);
+    mid.setRightDown(rightdown);
+    rightdown.setLeftUp(mid);
+    mid.setRightUp(rightup);
+    rightup.setLeftDown(mid);
+
+    HashMap<ATile, ATile> hexReps = new HashMap<>();
+    hexReps.put(mid, mid);
+    hexReps.put(l, mid);
+    hexReps.put(r, l);
+    hexReps.put(leftup, leftup);
+
+    Edge hexEdge1 = new Edge(mid, l, 10);
+    Edge hexEdge2 = new Edge(mid, leftup, 10);
+    Edge hexEdge3 = new Edge(mid, right, 100);
+
+    hexEdge1.breakEdge();
+    hexEdge2.breakEdge();
+
+    boolean testHexBreakEdge = t.checkExpect(mid.canMove("a"),
+            true)
+            && t.checkExpect(l.canMove("d"),
+            true)
+            && t.checkExpect(mid.canMove("w"),
+            true)
+            && t.checkExpect(leftup.canMove("x"),
+            true)
+            && t.checkExpect(mid.canMove("x"),
+            false);
+
+    boolean testCompareHexWeight = t.checkExpect(hexEdge1.compareWeight(hexEdge2),
+            0)
+            && t.checkExpect(hexEdge1.compareWeight(hexEdge3),
+            -1)
+            && t.checkExpect(hexEdge3.compareWeight(hexEdge1),
+            1);
+
+    boolean testFindHex = t.checkExpect(hexEdge1.sameReps(hexReps),
+            true)
+            && t.checkExpect(hexEdge2.sameReps(hexReps),
+            false);
+
+    hexEdge2.unionReps(hexReps);
+
+    boolean testUnionHex = t.checkExpect(hexEdge2.sameReps(hexReps),
+            true);
+
+    WeightComparator comp = new WeightComparator();
+    boolean testComp = t.checkExpect(comp.compare(hexEdge1, hexEdge2),
+            0)
+            && t.checkExpect(comp.compare(hexEdge3, hexEdge2),
+            1)
+            && t.checkExpect(comp.compare(hexEdge2, hexEdge3),
+            -1)
+            && t.checkExpect(comp.compare(e1, e2),
+            1)
+            && t.checkExpect(comp.compare(e2, e3),
+            0)
+            && t.checkExpect(comp.compare(e2, e1),
+            -1);
+
+    return testBreakEdge && testCompareWeight && testFind
+            && testUnion && testHexBreakEdge && testCompareHexWeight
+            && testFindHex && testUnionHex && testComp;
+  }
+
   boolean testHexTile(Tester t) {
     HexTile middle = new HexTile();
     HexTile left = new HexTile();
