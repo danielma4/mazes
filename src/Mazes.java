@@ -47,12 +47,12 @@ abstract class ATile implements ITile {
   abstract void breakTile(ATile other);
 
   //breaks the wall between this ATile and other RectTile
-  void breakRect(RectTile other) {
+  protected void breakRect(RectTile other) {
     throw new IllegalArgumentException("Incompatible tile types.");
   }
 
   //breaks the wall between this ATile and other HexTile
-  void breakHex(HexTile other) {
+  protected void breakHex(HexTile other) {
     throw new IllegalArgumentException("Incompatible tile types.");
   }
 
@@ -66,8 +66,6 @@ abstract class ATile implements ITile {
     this.visiting = false;
     this.visited = true;
   }
-  
-
   
   void resetVistStatus() {
     this.visited = false;
@@ -205,7 +203,7 @@ class RectTile extends ATile{
   }
 
   //breaks the wall between this and that RectTile
-  void breakRect(RectTile that) {
+  protected void breakRect(RectTile that) {
     String s = this.getDirection(that);
     switch (s) {
       case "up":
@@ -468,7 +466,7 @@ class HexTile extends ATile{
   }
 
   //breaks the wall between this HexTile and that HexTile
-  void breakHex(HexTile that) {
+  protected void breakHex(HexTile that) {
     String s = this.getDirection(that);
     switch (s) {
       case "left":
@@ -631,7 +629,7 @@ class Edge {
     this.weight = weight;
   }
   
-  //randomly sets weights of edges
+  //randomly sets weights of edges, biased towards lower weights if bias == true
   Edge(ATile tile1, ATile tile2, boolean bias) {
     this.tile1 = tile1;
     this.tile2 = tile2;
@@ -642,7 +640,7 @@ class Edge {
     }
   }
 
-//randomly sets weights of edges
+  //randomly sets weights of edges
   Edge(ATile tile1, ATile tile2) {
     this.tile1 = tile1;
     this.tile2 = tile2;
@@ -694,7 +692,7 @@ abstract class AMaze {
   protected final ArrayList<ArrayList<ATile>> grid;
   private final ArrayList<Edge> tree;
   private boolean inConstruction;
-  protected final ArrayList<ATile> shortestPath;
+  private final ArrayList<ATile> shortestPath;
   private final ArrayList<ATile> workList;
   private final ArrayList<ATile> seenList;
   //changes when the maze has been solved
@@ -1267,29 +1265,29 @@ class HexMaze extends AMaze {
 }
 
 abstract class TileUtils {
-  public abstract Integer calculateWidth(Integer currRow, Integer firstRowLength);
+  abstract Integer calculateWidth(Integer currRow, Integer firstRowLength);
   
-  public abstract ATile generateTile(Color color);
+  abstract ATile generateTile(Color color);
   
-  public abstract ATile generateTile();
+  abstract ATile generateTile();
 }
 
 class RectUtils extends TileUtils {
-  public Integer calculateWidth(Integer currRow, Integer firstRowLength) {
+  Integer calculateWidth(Integer currRow, Integer firstRowLength) {
     return firstRowLength;
   }
   
-  public ATile generateTile(Color color) {
+  ATile generateTile(Color color) {
     return new RectTile(color);
   }
   
-  public ATile generateTile() {
+  ATile generateTile() {
     return new RectTile();
   }
 }
 
 class HexUtils extends TileUtils {
-  public Integer calculateWidth(Integer currRow, Integer firstRowLength) {
+  Integer calculateWidth(Integer currRow, Integer firstRowLength) {
     int rowLength;
     if (currRow < firstRowLength) {
       rowLength = firstRowLength + currRow;
@@ -1299,11 +1297,11 @@ class HexUtils extends TileUtils {
     return rowLength;
   }
   
-  public ATile generateTile(Color color) {
+  ATile generateTile(Color color) {
     return new HexTile(color);
   }
   
-  public ATile generateTile() {
+  ATile generateTile() {
     return new HexTile();
   }
 }
@@ -1360,31 +1358,27 @@ class Game extends World {
 
   //moves the current tile given a key command
   public void onKeyEvent(String key) {
-    if (this.tickMode.equals("construction")) {
+    switch (key) {
+    case " ":
+      this.paused = !this.paused;
+      break;
+    case "c":
+      this.showConstruction = !this.showConstruction;
+      break;
+    case "k":
+      this.vertBias = !this.vertBias;
+      break;
+    case "K":
+      this.horzBias = !this.horzBias;
+      break;
+    case "n":
+      this.newRandomMaze();
+      break;
+    default:
+      break;
+    }
+    if (!this.tickMode.equals("construction")) {
       switch (key) {
-        case " ":
-            this.paused = !this.paused;
-          break;
-        case "c":
-          this.showConstruction = !this.showConstruction;
-          break;
-        case "k":
-          this.vertBias = !this.vertBias;
-          break;
-        case "K":
-          this.horzBias = !this.horzBias;
-          break;
-        case "n":
-          this.newRandomMaze();
-          break;
-        default:
-          break;
-      }
-    } else {
-      switch (key) {
-        case " ":
-          this.paused = !this.paused;
-          break;
         case "p":
           this.maze.togglePath();
           break;
@@ -1393,18 +1387,6 @@ class Game extends World {
           if (this.tickMode.equals("won")) {
             this.tickMode = "manual";
           }
-          break;
-        case "c":
-          this.showConstruction = !this.showConstruction;
-          break;
-        case "k":
-          this.vertBias = !this.vertBias;
-          break;
-        case "K":
-          this.horzBias = !this.horzBias;
-          break;
-        case "n":
-          this.newRandomMaze();
           break;
         case "h":
           this.maze.assignHeats(false);
@@ -1461,11 +1443,6 @@ class Game extends World {
     }
   }
 
-//  //determines if the game should end
-//  public boolean shouldWorldEnd() {
-//    return this.maze.won();
-//  }
-
   //traverses per tick
   public void onTick() {
     if (!this.paused) { 
@@ -1504,7 +1481,7 @@ class Game extends World {
     }
   }
   
-  public void newRandomMaze() {
+  private void newRandomMaze() {
     if (Math.random() > 0.5) {
       int width = (int)(Math.random() * 100) + 1;
       int height = (int)(Math.random() * 60) + 1;
