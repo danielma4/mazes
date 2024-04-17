@@ -726,7 +726,7 @@ abstract class AMaze {
   private final int height;
   private final int firstRowWidth;
   private final ArrayList<Edge> tree;
-  private final ArrayList<ATile> shortestPath;
+  private final ArrayList<ATile> solutionPath;
   private final ArrayList<ATile> workList;
   private final ArrayList<ATile> seenList;
   // Protected due to subclasses needing the grid for rendering and the stickLeft algorithm
@@ -735,15 +735,21 @@ abstract class AMaze {
   protected final int tileSize;
   //changes when the maze has been solved
   private boolean hasWon;
-  //the x and y positions are changing with the current position
+  //the x and y positions are changing with the current position, and are needed in subclasses for moving
   protected int colPos;
   protected int rowPos;
+  // Not final because it starts as true and swaps to false once all the walls have been knocked down
   private boolean inConstruction;
+  // Not final because the user can choose whether to display heat or paths.
+  // Protected because both are needed in subclasses for rendering
   protected boolean heatMode;
   protected boolean showPath;
-  //changes as walls are encountered
+  // Not final because the leftHand direction changes as the algorithm rotates.
+  // Protected because needed in subclasses for stickLeft algorithm
   protected String leftHand;
   
+  // Creates an AMaze of the given size with the given biases, using the provided TileUtils for
+  // calculating row width and generating the appropriate tiles
   AMaze(TileUtils utils, int height, int firstRowWidth, int tileSize, boolean vertBias, boolean horzBias) {
     this.utils = utils;
     this.height = height;
@@ -756,8 +762,8 @@ abstract class AMaze {
     this.hasWon = false;
     this.colPos = 0;
     this.rowPos = 0;
-    this.shortestPath = new ArrayList<ATile>();
-    this.shortestPath.add(grid.get(0).get(0));
+    this.solutionPath = new ArrayList<ATile>();
+    this.solutionPath.add(grid.get(0).get(0));
     this.workList = new ArrayList<ATile>();
     this.workList.add(this.grid.get(0).get(0));
     this.seenList = new ArrayList<ATile>();
@@ -766,13 +772,14 @@ abstract class AMaze {
     this.leftHand = "a";
   }
   
-  //formulates the grid of HexTiles which comprise this HexMaze
+  //formulates the grid of ATiles which comprise this AMaze, using this.utils to
+  //calculate row widths and generate the appropriate tiles
   private ArrayList<ArrayList<ATile>> buildTiles() {
     ArrayList<ArrayList<ATile>> tiles = new ArrayList<ArrayList<ATile>>();
     //iterates through the desired rows
     for (int row = 0; row < this.height; row++) {
       ArrayList<ATile> acc = new ArrayList<ATile>();
-      int width = utils.calculateWidth(row, this.firstRowWidth);
+      int width = this.utils.calculateWidth(row, this.firstRowWidth);
       for (int col = 0; col < width; col++) {
         ATile tile;
         if (row == 0 && col == 0) {
@@ -797,6 +804,7 @@ abstract class AMaze {
     return tiles;
   }
   
+  // Returns an ArrayList with all possible edges between tiles in the grid, with the given weight biases
   private ArrayList<Edge> getEdges(boolean vertBias, boolean horzBias) {
     ArrayList<Edge> edges = new ArrayList<Edge>();
     //iterates through rows
@@ -841,28 +849,29 @@ abstract class AMaze {
       this.tree.remove(0).breakEdge();
     }
   }
-  
+
+  // Checks and returns if this maze is still being constructed
   boolean inConstruction() {
     this.inConstruction = this.inConstruction && !this.tree.isEmpty();
     return this.inConstruction;
   }
   
-  //determines if this HexMaze has been solved
+  //Checks and returns if this maze has been won
   boolean won() {
     this.hasWon = this.hasWon || this.rowPos == this.grid.size() - 1
             && this.colPos == this.grid.get(this.grid.size() - 1).size() - 1;
     return this.hasWon;
   }
   
-  //displays the shortest path from start to end of this RectMaze
-  void showShortestPath() {
-    //iterates through the shortestPath ArrayList
-    for (ATile t : this.shortestPath) {
+  //displays the path from start to end of this AMaze
+  void showSolutionPath() {
+    //iterates through the solutionPath ArrayList
+    for (ATile t : this.solutionPath) {
       t.moveTo();
     }
   }
   
-//traverses this HexTile depth first
+  //One tick of traversal of this AMaze, depth first
   void dfsTick() {
     if (!this.workList.isEmpty()) {
       ATile curr = workList.remove(0);
@@ -888,7 +897,7 @@ abstract class AMaze {
     }
   }
 
-  //traverses the HexMaze breadth first
+  //One tick of traversal of this AMaze, breadth first
   void bfsTick() {
     if (!this.workList.isEmpty()) {
       ATile curr = workList.remove(0);
@@ -915,6 +924,7 @@ abstract class AMaze {
     }
   }
   
+  // Resets this maze so that it can be solved again
   void restart() {
     this.colPos = 0;
     this.rowPos = 0;
@@ -931,6 +941,7 @@ abstract class AMaze {
     this.grid.get(0).get(0).moveTo();
   }
   
+  // Moves from the current position in the given direction if possible, by the given amounts
   void move(String dir, int dcol, int drow) {
     if (this.grid.get(this.rowPos).get(this.colPos).canMove(dir)) {
       ATile oldTile = this.grid.get(this.rowPos).get(this.colPos);
@@ -939,15 +950,15 @@ abstract class AMaze {
       ATile newTile = this.grid.get(this.rowPos).get(this.colPos);
       oldTile.moveFrom();
       newTile.moveTo();
-      if (this.shortestPath.size() > 1 && this.shortestPath.get(1).equals(newTile)) {
-        this.shortestPath.remove(0);
+      if (this.solutionPath.size() > 1 && this.solutionPath.get(1).equals(newTile)) {
+        this.solutionPath.remove(0);
       } else {
-        shortestPath.add(0, newTile);
+        solutionPath.add(0, newTile);
       }
     }
   }
   
-  //calculates the time in which a tile is accessed
+  //Assigns each tiles "heat" (distance from either entrance or exit)
   void assignHeats(boolean startFromExit) {
     ATile startTile;
     if (startFromExit) {
@@ -986,17 +997,20 @@ abstract class AMaze {
     }
   }
   
-  void findMinPath() {
+  // Finds the solution path for this AMaze
+  void findPath() {
     while (!this.won()) {
       this.stickLeftTick();
     }
     this.restart();
   }
   
+  // Toggles whether to display all visited tiles
   void togglePath() {
     this.showPath = !this.showPath;
   }
   
+  // Toggles whether to display tiles heat
   void toggleHeat() {
     this.heatMode = !this.heatMode;
   }
@@ -1004,16 +1018,17 @@ abstract class AMaze {
   //Renders this AMaze as a WorldImage
   abstract WorldImage render();
 
-  //moves the current tile in a given direction
+  //moves from the current tile in a given direction, if possible
   abstract void move(String s);
 
-  //traverses this maze by greedily moving left
+  //traverses this maze by sticking to the leftHand wall
   abstract void stickLeftTick();
 }
 
-//represents a maze consisting of RectTiles
+//represents a Rectangle-shaped maze consisting of RectTiles
 class RectMaze extends AMaze {
   
+  // Creates a RectMaze of the given dimensions and size, with the given biases towards edges
   RectMaze(int width, int height, int tileSize, boolean vertBias, boolean horzBias) {
     super(new RectUtils(), height, width, tileSize, vertBias, horzBias);
     if (width > 100 || width < 1) {
@@ -1075,7 +1090,7 @@ class RectMaze extends AMaze {
   }
 
   
-  //traverses this RectMaze by going left whenever possible
+  //traverses this RectMaze by sticking to the leftHand wall
   void stickLeftTick() {
     ATile currTile = this.grid.get(rowPos).get(colPos);
     if (currTile.canMove(this.leftHand)) {
@@ -1087,7 +1102,7 @@ class RectMaze extends AMaze {
     }
   }
 
-  //changes the direction of the current RectTile so that we can continue to traverse left
+  // Rotates the current leftHand direction to the left
   private void rotateLeft() {
     switch (this.leftHand) {
       case "a":
@@ -1107,7 +1122,7 @@ class RectMaze extends AMaze {
     }
   }
 
-  //changes the direction of the current RectTile so that we can continue to traverse left
+  // Rotates the current leftHand direction to the right
   private void rotateRight() {
     switch (this.leftHand) {
       case "a":
@@ -1129,7 +1144,7 @@ class RectMaze extends AMaze {
 
 }
 
-//represents a maze consisting of HexTiles
+//represents a regular Hexagon-shaped maze consisting of HexTiles
 class HexMaze extends AMaze {
   private final int sideLength;
   
@@ -1237,7 +1252,7 @@ class HexMaze extends AMaze {
     }
   }
 
-  
+  //traverses this HexMaze by sticking to the leftHand wall
   void stickLeftTick() {
     ATile currTile = this.grid.get(rowPos).get(colPos);
     if (currTile.canMove(this.leftHand)) {
@@ -1250,7 +1265,7 @@ class HexMaze extends AMaze {
     }
   }
 
-  //rotates the orientation to continue moving left
+  // Rotates the current leftHand direction to the left
   private void rotateLeft() {
     switch (this.leftHand) {
       case "a":
@@ -1276,7 +1291,7 @@ class HexMaze extends AMaze {
     }
   }
 
-  //rotates the orientation to continue moving left
+  // Rotates the current leftHand direction to the right
   private void rotateRight() {
     switch (this.leftHand) {
       case "a":
@@ -1303,29 +1318,42 @@ class HexMaze extends AMaze {
   }
 }
 
+// Utility methods for mazes of different tiles types
 abstract class TileUtils {
+  
+  // Calculates the width of a row in a maze based off of its index number and the length of the first row
   abstract Integer calculateWidth(Integer currRow, Integer firstRowLength);
   
+  // Generates a Tile of the given color
   abstract ATile generateTile(Color color);
   
+  // Generates a Tile of the default color
   abstract ATile generateTile();
 }
 
+// Utility methods for RectMazes
 class RectUtils extends TileUtils {
+  
+  // The width of a RectMaze is constant, so return the firstRowLength
   Integer calculateWidth(Integer currRow, Integer firstRowLength) {
     return firstRowLength;
   }
   
+  // Generate a RectTile of the given color
   ATile generateTile(Color color) {
     return new RectTile(color);
   }
   
+  // Generates a RectTile of the default color
   ATile generateTile() {
     return new RectTile();
   }
 }
 
+// Utility methods for HexMazes
 class HexUtils extends TileUtils {
+  
+  // Calculates the width of a row in a HexMaze based off of its index number and the length of the first row
   Integer calculateWidth(Integer currRow, Integer firstRowLength) {
     int rowLength;
     if (currRow < firstRowLength) {
@@ -1336,18 +1364,22 @@ class HexUtils extends TileUtils {
     return rowLength;
   }
   
+  // Generates a HexTile of the given color
   ATile generateTile(Color color) {
     return new HexTile(color);
   }
   
+  // Generates a HexTile of the default color
   ATile generateTile() {
     return new HexTile();
   }
 }
 
-//represents the game of solving the maze
+//represents the game of solving mazes
 class Game extends World {
   
+  // None of the fields are final as they are all subject to change based on user input
+  // e.g. creating a new maze of a different size, toggling the paths and heat, pausing the game, etc.
   private AMaze maze;
   private int tileSize;
   private boolean paused;
@@ -1357,6 +1389,7 @@ class Game extends World {
   private boolean vertBias;
   private boolean horzBias;
   
+  // Creates a Game with a RectMaze of the given size, where width and height are in number of tiles
   Game(int width, int height) {
     this.tileSize = Math.min(250, Math.min(1400 / width, 700 / height));
     this.vertBias = false;
@@ -1367,6 +1400,7 @@ class Game extends World {
     this.showConstruction = true;
   }
   
+  // Creates a Game with a HexMaze of the given sideLength, where sideLength is in number of tiles
   Game(int sideLength) {
     this.tileSize = 250 / sideLength;
     this.vertBias = false;
@@ -1377,6 +1411,7 @@ class Game extends World {
     this.showConstruction = true;
   }
   
+  // Creates a Game, randomly choosing to have either a RectMaze or a HexMaze
   Game() {
     this.vertBias = false;
     this.horzBias = false;
@@ -1395,7 +1430,7 @@ class Game extends World {
     return scene;
   }
 
-  //moves the current tile given a key command
+  //moves the current tile based on a key command
   public void onKeyEvent(String key) {
     switch (key) {
     case " ":
@@ -1482,7 +1517,7 @@ class Game extends World {
     }
   }
 
-  //traverses per tick
+  // Updates the game each tick, based on whether it has been won, is in construction, and the Game's tickMode
   public void onTick() {
     if (!this.paused) { 
       if (this.maze.won()) {
@@ -1498,7 +1533,7 @@ class Game extends World {
             }
           }
           if (!this.maze.inConstruction()) {
-            this.maze.findMinPath();
+            this.maze.findPath();
             this.tickMode = "manual";
           }
           break;
@@ -1512,7 +1547,7 @@ class Game extends World {
           this.maze.stickLeftTick();
           break;
         case "won":
-          this.maze.showShortestPath();
+          this.maze.showSolutionPath();
           break;
         default:
           break;
@@ -1520,6 +1555,7 @@ class Game extends World {
     }
   }
   
+  // Generates either a RectMaze or HexMaze of random size, and replaces the current maze with it
   private void newRandomMaze() {
     if (Math.random() > 0.5) {
       int width = (int)(Math.random() * 100) + 1;
@@ -1536,6 +1572,7 @@ class Game extends World {
   }
 }
 
+// Examples and tests
 class ExamplesMazes {
   Game m = new Game();
 
