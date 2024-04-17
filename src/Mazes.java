@@ -1515,7 +1515,7 @@ class Game extends World {
           }
           break;
         default:
-          if (this.tickMode.equals("manual")) {
+          if (this.tickMode.equals("manual") && !this.paused) {
             this.maze.move(key);
           }
           break;
@@ -1583,7 +1583,7 @@ class Game extends World {
 class ExamplesMazes {
   Game m = new Game();
 
-  void testStuff(Tester t) {
+  void testBigBang(Tester t) {
     m.bigBang(1500, 800, 0.00001);
   }
 
