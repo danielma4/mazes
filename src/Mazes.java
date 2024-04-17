@@ -1863,4 +1863,21 @@ class ExamplesMazes {
     return testSetandBreakByCanMove && testExceptions && testAccessibleNeighbors;
   }
 
+  boolean testRectMazes(Tester t) {
+    AMaze unbiasedRectMaze = new RectMaze(3, 3, 40, false, false);
+    AMaze vertBiasedRectMaze = new RectMaze(2, 2, 10, true, false);
+    AMaze horzBiasedRectMaze = new RectMaze(4, 4, 15, false, true);
+
+
+    return true;
+  }
+
+  boolean testHexMazes(Tester t) {
+    AMaze unbiasedHexMaze = new HexMaze(3, 10, false, false);
+    AMaze vertBiasedHexMaze = new HexMaze(2, 5, true, false);
+    AMaze horzBiasedHexMaze = new HexMaze(4, 5, false, true);
+
+    return true;
+  }
+
 }
