@@ -82,7 +82,7 @@ abstract class ATile implements ITile {
   
   abstract void assignNeighbors(ArrayList<ArrayList<ATile>> grid, int rowPos, int colPos);
   
-  abstract void appendHalfEdges(ArrayList<Edge> edges);
+  abstract void appendHalfEdges(ArrayList<Edge> edges, boolean vertBias, boolean horzBias);
 }
 
 class RectTile extends ATile{
@@ -298,12 +298,12 @@ class RectTile extends ATile{
     }
   }
   
-  void appendHalfEdges(ArrayList<Edge> edges) {
+  void appendHalfEdges(ArrayList<Edge> edges, boolean vertBias, boolean horzBias) {
     if (this.right != null) {
-      edges.add(new Edge(this, this.right));
+      edges.add(new Edge(this, this.right, horzBias));
     }
     if (this.down != null) {
-      edges.add(new Edge(this, this.down));
+      edges.add(new Edge(this, this.down, vertBias));
     }
   }
 }
@@ -605,15 +605,15 @@ class HexTile extends ATile{
     }
   }
   
-  void appendHalfEdges(ArrayList<Edge> edges) {
+  void appendHalfEdges(ArrayList<Edge> edges, boolean diagBias, boolean horzBias) {
     if (this.right != null) {
-      edges.add(new Edge(this, this.right));
+      edges.add(new Edge(this, this.right, horzBias));
     }
     if (this.rightDown != null) {
-      edges.add(new Edge(this, this.rightDown));
+      edges.add(new Edge(this, this.rightDown, diagBias));
     }
     if (this.leftDown != null) {
-      edges.add(new Edge(this, this.leftDown));
+      edges.add(new Edge(this, this.leftDown, diagBias));
     }
   }
 }
@@ -630,8 +630,19 @@ class Edge {
     this.tile2 = tile2;
     this.weight = weight;
   }
-
+  
   //randomly sets weights of edges
+  Edge(ATile tile1, ATile tile2, boolean bias) {
+    this.tile1 = tile1;
+    this.tile2 = tile2;
+    if (bias) {
+      this.weight = (int) (Math.random() * 100 * 60 / 2);
+    } else {
+      this.weight = (int) (Math.random() * 100 * 60);
+    }
+  }
+
+//randomly sets weights of edges
   Edge(ATile tile1, ATile tile2) {
     this.tile1 = tile1;
     this.tile2 = tile2;
@@ -678,8 +689,11 @@ abstract class AMaze {
   
   private final TileUtils utils;
   private final int height;
+  protected final int tileSize;
   private final int firstRowWidth;
   protected final ArrayList<ArrayList<ATile>> grid;
+  private final ArrayList<Edge> tree;
+  private boolean inConstruction;
   protected final ArrayList<ATile> shortestPath;
   private final ArrayList<ATile> workList;
   private final ArrayList<ATile> seenList;
@@ -690,13 +704,17 @@ abstract class AMaze {
   protected int rowPos;
   protected boolean heatMode;
   protected boolean showPath;
+  //changes as walls are encountered
+  protected String leftHand;
   
-  AMaze(TileUtils utils, int height, int firstRowWidth) {
+  AMaze(TileUtils utils, int height, int firstRowWidth, int tileSize, boolean vertBias, boolean horzBias) {
     this.utils = utils;
     this.height = height;
+    this.tileSize = tileSize;
     this.firstRowWidth = firstRowWidth;
     this.grid = this.buildTiles();
-    this.breakTreeWalls();
+    this.tree = this.buildTree(vertBias, horzBias);
+    this.inConstruction = true;
     this.grid.get(0).get(0).moveTo();
     this.hasWon = false;
     this.colPos = 0;
@@ -708,6 +726,7 @@ abstract class AMaze {
     this.seenList = new ArrayList<ATile>();
     this.heatMode = false;
     this.showPath = true;
+    this.leftHand = "a";
   }
   
   //formulates the grid of HexTiles which comprise this HexMaze
@@ -741,22 +760,22 @@ abstract class AMaze {
     return tiles;
   }
   
-  private ArrayList<Edge> getEdges() {
+  private ArrayList<Edge> getEdges(boolean vertBias, boolean horzBias) {
     ArrayList<Edge> edges = new ArrayList<Edge>();
     //iterates through rows
     for (int row = 0; row < this.height; row++) {
       int width = this.utils.calculateWidth(row, this.firstRowWidth);
       //iteartes through columns and formulates edges
       for (int col = 0; col < width; col++) {
-        this.grid.get(row).get(col).appendHalfEdges(edges);
+        this.grid.get(row).get(col).appendHalfEdges(edges, vertBias, horzBias);
       }
     }
     return edges;
   }
   
   //uses Kruskal's algorithm to gather the edges in the minimum spanning tree (maze)
-  private ArrayList<Edge> buildTree() {
-    ArrayList<Edge> edges = this.getEdges();
+  private ArrayList<Edge> buildTree(boolean vertBias, boolean horzBias) {
+    ArrayList<Edge> edges = this.getEdges(vertBias, horzBias);
     Collections.sort(edges, new WeightComparator());
     ArrayList<Edge> edgesInTree = new ArrayList<Edge>();
     
@@ -779,13 +798,16 @@ abstract class AMaze {
     return edgesInTree;
   }
   
-  //breaks all the walls corresponding to edges in the MST
-  private void breakTreeWalls() {
-    ArrayList<Edge> tree = this.buildTree();
-    //iterates through the edges in MST and breaks corresponding walls
-    for (Edge edge : tree) {
-      edge.breakEdge();
+  //breaks the first wall in the MST
+  void breakFirstWall() {
+    if (!this.tree.isEmpty()) {
+      this.tree.remove(0).breakEdge();
     }
+  }
+  
+  boolean inConstruction() {
+    this.inConstruction = this.inConstruction && !this.tree.isEmpty();
+    return this.inConstruction;
   }
   
   //determines if this HexMaze has been solved
@@ -861,6 +883,7 @@ abstract class AMaze {
     this.rowPos = 0;
     this.workList.clear();
     this.seenList.clear();
+    this.leftHand = "a";
     this.hasWon = false;
     for (ArrayList<ATile> row : this.grid) {
       for (ATile tile : row) {
@@ -926,6 +949,13 @@ abstract class AMaze {
     }
   }
   
+  void findMinPath() {
+    while (!this.won()) {
+      this.stickLeftTick();
+    }
+    this.restart();
+  }
+  
   void togglePath() {
     this.showPath = !this.showPath;
   }
@@ -946,35 +976,15 @@ abstract class AMaze {
 
 //represents a maze consisting of RectTiles
 class RectMaze extends AMaze {
-  private final int width;
-//  private final int height;
-  private final int tileSize;
-  //the grid must be reassigned when creating the heat map
-//  private ArrayList<ArrayList<ATile>> grid;
-//  private final ArrayList<ATile> shortestPath;
   
-
-  private final HashMap<ATile, Integer> timeIn;
-
-  //changes as walls are encountered
-  private String leftHand;
-  
-  RectMaze(int width, int height, int tileSize) {
-    super(new RectUtils(), height, width);
+  RectMaze(int width, int height, int tileSize, boolean vertBias, boolean horzBias) {
+    super(new RectUtils(), height, width, tileSize, vertBias, horzBias);
     if (width > 100 || width < 1) {
       throw new IllegalArgumentException("Width must be between 1 and 100");
     }
     if (height > 60 || height < 1) {
       throw new IllegalArgumentException("Height must be between 1 and 60");
     }
-    this.width = width;
-    this.tileSize = tileSize;
-    this.leftHand = "a";
-    this.timeIn = new HashMap<>();
-    while (!this.won()) {
-      this.stickLeftTick();
-    }
-    this.restart();
   }
 
   //renders this RectMaze as a WorldImage
@@ -1079,25 +1089,19 @@ class RectMaze extends AMaze {
         throw new IllegalArgumentException("Invalid direction: " + leftHand);
     }
   }
-  
 
 }
 
 //represents a maze consisting of HexTiles
 class HexMaze extends AMaze {
   private final int sideLength;
-  private final int tileSize;
-  //this field changes as we rotate or HexTile orientation
-  private String leftHand;
   
-  HexMaze(int sideLength, int tileSize) {
-    super(new HexUtils(), sideLength * 2 - 1, sideLength);
+  HexMaze(int sideLength, int tileSize, boolean vertBias, boolean horzBias) {
+    super(new HexUtils(), sideLength * 2 - 1, sideLength, tileSize, vertBias, horzBias);
     if (sideLength > 25 || sideLength < 1) {
       throw new IllegalArgumentException("Sidelength must be between 1 and 23");
     }
     this.sideLength = sideLength;
-    this.tileSize = tileSize;
-    this.leftHand = "a";
   }
 
   //renders this HexMaze as a WorldImage
@@ -1312,19 +1316,36 @@ class Game extends World {
   private boolean paused;
   private String renderMode;
   private String tickMode;
+  private boolean showConstruction;
+  private boolean vertBias;
+  private boolean horzBias;
   
   Game(int width, int height) {
     this.tileSize = Math.min(250, Math.min(1400 / width, 700 / height));
-    this.maze = new RectMaze(width, height, this.tileSize);
+    this.vertBias = false;
+    this.horzBias = false;
+    this.maze = new RectMaze(width, height, this.tileSize, this.vertBias, this.horzBias);
     this.renderMode = "normal";
-    this.tickMode = "manual";
+    this.tickMode = "construction";
+    this.showConstruction = true;
   }
   
   Game(int sideLength) {
     this.tileSize = 250 / sideLength;
-    this.maze = new HexMaze(sideLength, this.tileSize);
+    this.vertBias = false;
+    this.horzBias = false;
+    this.maze = new HexMaze(sideLength, this.tileSize, this.vertBias, this.horzBias);
     this.renderMode = "normal";
-    this.tickMode = "manual";
+    this.tickMode = "construction";
+    this.showConstruction = true;
+  }
+  
+  Game() {
+    this.vertBias = false;
+    this.horzBias = false;
+    this.newRandomMaze();
+    this.renderMode = "normal";
+    this.showConstruction = true;
   }
 
   //renders the game as a WorldScene
@@ -1339,77 +1360,132 @@ class Game extends World {
 
   //moves the current tile given a key command
   public void onKeyEvent(String key) {
-    switch (key) {
-      case "p":
-        this.maze.togglePath();
-        break;
-      case "r":
-        this.maze.restart();
-        break;
-      case "h":
-        this.maze.assignHeats(false);
-        if (!this.renderMode.equals("exit heat map")) {
-          this.maze.toggleHeat();
-        }
-        if (this.renderMode.equals("start heat map")) {
-          this.renderMode = "normal";
-        } else {
-          this.renderMode = "start heat map";
-        }
-        break;
-      case "H":
-        this.maze.assignHeats(true);
-        if (!this.renderMode.equals("start heat map")) {
-          this.maze.toggleHeat();
-        }
-        if (this.renderMode.equals("exit heat map")) {
-          this.renderMode = "normal";
-        } else {
-          this.renderMode = "exit heat map";
-        }
-        break;
-      case " ":
-        this.paused = !this.paused;
-        break;
-      case "M":
-        if (!this.tickMode.equals("manual")) {
-          this.tickMode = "manual";
+    if (this.tickMode.equals("construction")) {
+      switch (key) {
+        case " ":
+            this.paused = !this.paused;
+          break;
+        case "c":
+          this.showConstruction = !this.showConstruction;
+          break;
+        case "k":
+          this.vertBias = !this.vertBias;
+          break;
+        case "K":
+          this.horzBias = !this.horzBias;
+          break;
+        case "n":
+          this.newRandomMaze();
+          break;
+        default:
+          break;
+      }
+    } else {
+      switch (key) {
+        case " ":
+          this.paused = !this.paused;
+          break;
+        case "p":
+          this.maze.togglePath();
+          break;
+        case "r":
           this.maze.restart();
-        }
-        break;
-      case "D":
-        if (!this.tickMode.equals("dfs")) {
-          this.tickMode = "dfs";
-          this.maze.restart();
-        }
-        break;
-      case "B":
-        if (!this.tickMode.equals("bfs")) {
-          this.tickMode = "bfs";
-          this.maze.restart();
-        }
-        break;
-      case "L":
-        if (!this.tickMode.equals("lhs")) {
-          this.tickMode = "lhs";
-          this.maze.restart();
-        }
-        break;
-      default:
-        this.maze.move(key);
-        break;
+          if (this.tickMode.equals("won")) {
+            this.tickMode = "manual";
+          }
+          break;
+        case "c":
+          this.showConstruction = !this.showConstruction;
+          break;
+        case "k":
+          this.vertBias = !this.vertBias;
+          break;
+        case "K":
+          this.horzBias = !this.horzBias;
+          break;
+        case "n":
+          this.newRandomMaze();
+          break;
+        case "h":
+          this.maze.assignHeats(false);
+          if (!this.renderMode.equals("exit heat map")) {
+            this.maze.toggleHeat();
+          }
+          if (this.renderMode.equals("start heat map")) {
+            this.renderMode = "normal";
+          } else {
+            this.renderMode = "start heat map";
+          }
+          break;
+        case "H":
+          this.maze.assignHeats(true);
+          if (!this.renderMode.equals("start heat map")) {
+            this.maze.toggleHeat();
+          }
+          if (this.renderMode.equals("exit heat map")) {
+            this.renderMode = "normal";
+          } else {
+            this.renderMode = "exit heat map";
+          }
+          break;
+        case "M":
+          if (!this.tickMode.equals("manual")) {
+            this.tickMode = "manual";
+            this.maze.restart();
+          }
+          break;
+        case "D":
+          if (!this.tickMode.equals("dfs")) {
+            this.tickMode = "dfs";
+            this.maze.restart();
+          }
+          break;
+        case "B":
+          if (!this.tickMode.equals("bfs")) {
+            this.tickMode = "bfs";
+            this.maze.restart();
+          }
+          break;
+        case "L":
+          if (!this.tickMode.equals("lhs")) {
+            this.tickMode = "lhs";
+            this.maze.restart();
+          }
+          break;
+        default:
+          if (this.tickMode.equals("manual")) {
+            this.maze.move(key);
+          }
+          break;
+      }
     }
   }
 
-  //determines if the game should end
-  public boolean shouldWorldEnd() {
-    return this.maze.won();
-  }
+//  //determines if the game should end
+//  public boolean shouldWorldEnd() {
+//    return this.maze.won();
+//  }
 
   //traverses per tick
   public void onTick() {
     if (!this.paused) { 
+      if (this.maze.won()) {
+        this.tickMode = "won";
+      }
       switch (this.tickMode) {
+        case "construction":
+          if (this.showConstruction && this.maze.inConstruction()) {
+            this.maze.breakFirstWall();
+          } else {
+            while (this.maze.inConstruction()) {
+              this.maze.breakFirstWall();
+            }
+          }
+          if (!this.maze.inConstruction()) {
+            this.maze.findMinPath();
+            this.tickMode = "manual";
+          }
+          break;
         case "dfs":
           this.maze.dfsTick();
           break;
@@ -1419,29 +1495,36 @@ class Game extends World {
         case "lhs":
           this.maze.stickLeftTick();
           break;
+        case "won":
+          this.maze.showShortestPath();
+          break;
         default:
           break;
       }
     }
   }
-
-  //displays a scene after the game has ended
-  public WorldScene lastScene(String msg) {
-    this.maze.showShortestPath();
-    WorldImage mazeImage = maze.render();
-    int width = (int) mazeImage.getWidth();
-    int height = (int) mazeImage.getHeight();
-    WorldScene scene = new WorldScene(width + this.tileSize, height + this.tileSize);
-    scene.placeImageXY(mazeImage, (width + this.tileSize) / 2, (height + this.tileSize) / 2);
-    return scene;
+  
+  public void newRandomMaze() {
+    if (Math.random() > 0.5) {
+      int width = (int)(Math.random() * 100) + 1;
+      int height = (int)(Math.random() * 60) + 1;
+      this.tileSize = Math.min(250, Math.min(1400 / width, 700 / height));
+      this.maze = new RectMaze(width, height, this.tileSize, this.vertBias, this.horzBias);
+    } else {
+      int sideLength =  (int)(Math.random() * 23) + 1;
+      this.tileSize = 250 / sideLength;
+      this.maze = new HexMaze(sideLength, this.tileSize, this.vertBias, this.horzBias);
+    }
+    this.tickMode = "construction";
+    this.renderMode = "normal";
   }
 }
 
 class ExamplesMazes {
-  Game m = new Game(23);
+  Game m = new Game();
 
   void testStuff(Tester t) {
-    m.bigBang(1500, 800, 0.000001);
+    m.bigBang(1500, 800, 0.00001);
   }
 
   boolean testATileAndEdge(Tester t) {
