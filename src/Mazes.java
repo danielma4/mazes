@@ -851,18 +851,14 @@ abstract class AMaze {
       this.tree.remove(0).breakEdge();
     }
   }
-
-  // Checks and returns if this maze is still being constructed
-  boolean inConstruction() {
-    this.inConstruction = this.inConstruction && !this.tree.isEmpty();
-    return this.inConstruction;
-  }
   
-  //Checks and returns if this maze has been won
-  boolean won() {
-    this.hasWon = this.hasWon || this.rowPos == this.grid.size() - 1
-            && this.colPos == this.grid.get(this.grid.size() - 1).size() - 1;
-    return this.hasWon;
+  // Finds the solution path for this AMaze
+  void findPath() {
+    // Iterates through until the solution path is found
+    while (!this.won()) {
+      this.stickLeftTick();
+    }
+    this.restart();
   }
   
   //displays the path from start to end of this AMaze
@@ -870,6 +866,23 @@ abstract class AMaze {
     //iterates through the solutionPath ArrayList
     for (ATile t : this.solutionPath) {
       t.moveTo();
+    }
+  }
+  
+  //Moves from the current position in the given direction if possible, by the given amounts
+  void move(String dir, int dcol, int drow) {
+    if (this.grid.get(this.rowPos).get(this.colPos).canMove(dir)) {
+      ATile oldTile = this.grid.get(this.rowPos).get(this.colPos);
+      this.colPos += dcol;
+      this.rowPos += drow;
+      ATile newTile = this.grid.get(this.rowPos).get(this.colPos);
+      oldTile.moveFrom();
+      newTile.moveTo();
+      if (this.solutionPath.size() > 1 && this.solutionPath.get(1).equals(newTile)) {
+        this.solutionPath.remove(0);
+      } else {
+        solutionPath.add(0, newTile);
+      }
     }
   }
   
@@ -926,41 +939,6 @@ abstract class AMaze {
     }
   }
   
-  // Resets this maze so that it can be solved again
-  void restart() {
-    this.colPos = 0;
-    this.rowPos = 0;
-    this.workList.clear();
-    this.seenList.clear();
-    this.leftHand = "a";
-    this.hasWon = false;
-    // Iterates through every tile in the grid
-    for (ArrayList<ATile> row : this.grid) {
-      for (ATile tile : row) {
-        tile.resetVistStatus();
-      }
-    }
-    this.workList.add(this.grid.get(0).get(0));
-    this.grid.get(0).get(0).moveTo();
-  }
-  
-  // Moves from the current position in the given direction if possible, by the given amounts
-  void move(String dir, int dcol, int drow) {
-    if (this.grid.get(this.rowPos).get(this.colPos).canMove(dir)) {
-      ATile oldTile = this.grid.get(this.rowPos).get(this.colPos);
-      this.colPos += dcol;
-      this.rowPos += drow;
-      ATile newTile = this.grid.get(this.rowPos).get(this.colPos);
-      oldTile.moveFrom();
-      newTile.moveTo();
-      if (this.solutionPath.size() > 1 && this.solutionPath.get(1).equals(newTile)) {
-        this.solutionPath.remove(0);
-      } else {
-        solutionPath.add(0, newTile);
-      }
-    }
-  }
-  
   //Assigns each tiles "heat" (distance from either entrance or exit)
   void assignHeats(boolean startFromExit) {
     ATile startTile;
@@ -1001,15 +979,6 @@ abstract class AMaze {
     }
   }
   
-  // Finds the solution path for this AMaze
-  void findPath() {
-    // Iterates through until the solution path is found
-    while (!this.won()) {
-      this.stickLeftTick();
-    }
-    this.restart();
-  }
-  
   // Toggles whether to display all visited tiles
   void togglePath() {
     this.showPath = !this.showPath;
@@ -1018,6 +987,37 @@ abstract class AMaze {
   // Toggles whether to display tiles heat
   void toggleHeat() {
     this.heatMode = !this.heatMode;
+  }
+  
+  // Checks and returns if this maze is still being constructed
+  boolean inConstruction() {
+    this.inConstruction = this.inConstruction && !this.tree.isEmpty();
+    return this.inConstruction;
+  }
+  
+  //Checks and returns if this maze has been won
+  boolean won() {
+    this.hasWon = this.hasWon || this.rowPos == this.grid.size() - 1
+            && this.colPos == this.grid.get(this.grid.size() - 1).size() - 1;
+    return this.hasWon;
+  }
+  
+  // Resets this maze so that it can be solved again
+  void restart() {
+    this.colPos = 0;
+    this.rowPos = 0;
+    this.workList.clear();
+    this.seenList.clear();
+    this.leftHand = "a";
+    this.hasWon = false;
+    // Iterates through every tile in the grid
+    for (ArrayList<ATile> row : this.grid) {
+      for (ATile tile : row) {
+        tile.resetVistStatus();
+      }
+    }
+    this.workList.add(this.grid.get(0).get(0));
+    this.grid.get(0).get(0).moveTo();
   }
   
   //Renders this AMaze as a WorldImage
@@ -1364,7 +1364,7 @@ class HexUtils extends TileUtils {
     int rowLength;
     if (currRow < firstRowLength) {
       rowLength = firstRowLength + currRow;
-    } else if (currRow < 2 * currRow - 1){
+    } else if (currRow < 2 * firstRowLength - 1){
       rowLength = 3 * firstRowLength - 2 - currRow;
     } else {
       throw new IllegalArgumentException("currRow (" + currRow + ") out of bounds for sideLength (" + firstRowLength + ")");
@@ -1586,9 +1586,9 @@ class Game extends World {
 class ExamplesMazes {
   Game m = new Game();
 
-  void testBigBang(Tester t) {
-    m.bigBang(1500, 800, 0.0000001);
-  }
+//  void testBigBang(Tester t) {
+//    m.bigBang(1500, 800, 0.0000001);
+//  }
 
   boolean testATileAndEdge(Tester t) {
     ATile middle = new RectTile();
@@ -1890,12 +1890,20 @@ class ExamplesMazes {
     boolean testRectWidth = t.checkExpect(ru.calculateWidth(0, 9), 9)
         && t.checkExpect(ru.calculateWidth(3, 17), 17)
         && t.checkExpect(ru.calculateWidth(44, 26), 26);
-    
     boolean testHexWidth = t.checkExpect(hu.calculateWidth(0, 7), 7)
         && t.checkExpect(hu.calculateWidth(3, 17), 20)
-        && t.checkExpect(hu.calculateWidth(44, 26), 32);
+        && t.checkExpect(hu.calculateWidth(44, 26), 32)
+        && t.checkException(new IllegalArgumentException("currRow (10) out of bounds for sideLength (5)"),
+            hu, "calculateWidth", 10, 5);
     
-    return testRectWidth && testHexWidth;
+    boolean testTileGen = t.checkExpect(ru.generateTile(), new RectTile())
+        && t.checkExpect(hu.generateTile(), new HexTile())
+        && t.checkExpect(ru.generateTile(Color.BLUE), new RectTile(Color.BLUE))
+        && t.checkExpect(ru.generateTile(new Color(1, 2, 3)), new RectTile(new Color(1, 2, 3)))
+        && t.checkExpect(hu.generateTile(Color.RED), new HexTile(Color.RED))
+        && t.checkExpect(hu.generateTile(new Color(110, 220, 233)), new HexTile(new Color(110, 220, 233)));
+    
+    return testRectWidth && testHexWidth && testTileGen;
   }
 
 }
