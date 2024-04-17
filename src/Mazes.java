@@ -859,12 +859,15 @@ abstract class AMaze {
   void restart() {
     this.colPos = 0;
     this.rowPos = 0;
+    this.workList.clear();
+    this.seenList.clear();
     this.hasWon = false;
     for (ArrayList<ATile> row : this.grid) {
       for (ATile tile : row) {
         tile.resetVistStatus();
       }
     }
+    this.workList.add(this.grid.get(0).get(0));
     this.grid.get(0).get(0).moveTo();
   }
   
@@ -1304,30 +1307,33 @@ class HexUtils extends TileUtils {
 //represents the game of solving the maze
 class Game extends World {
   
-  private final AMaze maze;
-  private final int width;
-  private final int height;
-  private final int tileSize;
+  private AMaze maze;
+  private int tileSize;
+  private boolean paused;
+  private String renderMode;
+  private String tickMode;
   
   Game(int width, int height) {
     this.tileSize = Math.min(250, Math.min(1400 / width, 700 / height));
     this.maze = new RectMaze(width, height, this.tileSize);
-    this.width = width * this.tileSize;
-    this.height = height * this.tileSize;
+    this.renderMode = "normal";
+    this.tickMode = "manual";
   }
   
   Game(int sideLength) {
     this.tileSize = 250 / sideLength;
     this.maze = new HexMaze(sideLength, this.tileSize);
-    this.width = (int) (Math.sqrt(3) * sideLength * (2 * this.tileSize - 1));
-    this.height = (int) (this.tileSize * ((2 * sideLength) + ((3.0 / 4.0) * (sideLength * 2 - 1))));
+    this.renderMode = "normal";
+    this.tickMode = "manual";
   }
 
   //renders the game as a WorldScene
   public WorldScene makeScene() {
     WorldImage mazeImage = this.maze.render();
-    WorldScene scene = new WorldScene(this.width + this.tileSize, this.height + this.tileSize);
-    scene.placeImageXY(mazeImage, (this.width + this.tileSize) / 2, (this.height + this.tileSize) / 2);
+    int width = (int) mazeImage.getWidth();
+    int height = (int) mazeImage.getHeight();
+    WorldScene scene = new WorldScene(width + this.tileSize, height + this.tileSize);
+    scene.placeImageXY(mazeImage, (width + this.tileSize) / 2, (height + this.tileSize) / 2);
     return scene;
   }
 
@@ -1337,15 +1343,62 @@ class Game extends World {
       case "p":
         this.maze.togglePath();
         break;
+      case "r":
+        this.maze.restart();
+        break;
       case "h":
         this.maze.assignHeats(false);
-        this.maze.toggleHeat();
+        if (!this.renderMode.equals("exit heat map")) {
+          this.maze.toggleHeat();
+        }
+        if (this.renderMode.equals("start heat map")) {
+          this.renderMode = "normal";
+        } else {
+          this.renderMode = "start heat map";
+        }
         break;
       case "H":
         this.maze.assignHeats(true);
-        this.maze.toggleHeat();
+        if (!this.renderMode.equals("start heat map")) {
+          this.maze.toggleHeat();
+        }
+        if (this.renderMode.equals("exit heat map")) {
+          this.renderMode = "normal";
+        } else {
+          this.renderMode = "exit heat map";
+        }
+        break;
+      case " ":
+        this.paused = !this.paused;
+        break;
+      case "M":
+        if (!this.tickMode.equals("manual")) {
+          this.tickMode = "manual";
+          this.maze.restart();
+        }
+        break;
+      case "D":
+        if (!this.tickMode.equals("dfs")) {
+          this.tickMode = "dfs";
+          this.maze.restart();
+        }
+        break;
+      case "B":
+        if (!this.tickMode.equals("bfs")) {
+          this.tickMode = "bfs";
+          this.maze.restart();
+        }
+        break;
+      case "L":
+        if (!this.tickMode.equals("lhs")) {
+          this.tickMode = "lhs";
+          this.maze.restart();
+        }
+        break;
+      default:
+        this.maze.move(key);
+        break;
     }
-    this.maze.move(key);
   }
 
   //determines if the game should end
@@ -1355,15 +1408,31 @@ class Game extends World {
 
   //traverses per tick
   public void onTick() {
-    this.maze.bfsTick();
+    if (!this.paused) { 
+      switch (this.tickMode) {
+        case "dfs":
+          this.maze.dfsTick();
+          break;
+        case "bfs":
+          this.maze.bfsTick();
+          break;
+        case "lhs":
+          this.maze.stickLeftTick();
+          break;
+        default:
+          break;
+      }
+    }
   }
 
   //displays a scene after the game has ended
   public WorldScene lastScene(String msg) {
     this.maze.showShortestPath();
     WorldImage mazeImage = maze.render();
-    WorldScene scene = new WorldScene(this.width + this.tileSize, this.height + this.tileSize);
-    scene.placeImageXY(mazeImage, (this.width + this.tileSize) / 2, (height + this.tileSize) / 2);
+    int width = (int) mazeImage.getWidth();
+    int height = (int) mazeImage.getHeight();
+    WorldScene scene = new WorldScene(width + this.tileSize, height + this.tileSize);
+    scene.placeImageXY(mazeImage, (width + this.tileSize) / 2, (height + this.tileSize) / 2);
     return scene;
   }
 }
