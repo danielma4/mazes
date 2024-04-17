@@ -776,10 +776,11 @@ abstract class AMaze {
   //calculate row widths and generate the appropriate tiles
   private ArrayList<ArrayList<ATile>> buildTiles() {
     ArrayList<ArrayList<ATile>> tiles = new ArrayList<ArrayList<ATile>>();
-    //iterates through the desired rows
+    //iterates through the maze's rows
     for (int row = 0; row < this.height; row++) {
       ArrayList<ATile> acc = new ArrayList<ATile>();
       int width = this.utils.calculateWidth(row, this.firstRowWidth);
+      // iterates through the maze's columns and creates Tiles
       for (int col = 0; col < width; col++) {
         ATile tile;
         if (row == 0 && col == 0) {
@@ -793,6 +794,7 @@ abstract class AMaze {
       }
       tiles.add(acc);
     }
+    // iterates through the mazes rows
     for (int row = 0; row < this.height; row++) {
       int width = this.utils.calculateWidth(row, this.firstRowWidth);
       //iterates through and sets neighbors
@@ -810,7 +812,7 @@ abstract class AMaze {
     //iterates through rows
     for (int row = 0; row < this.height; row++) {
       int width = this.utils.calculateWidth(row, this.firstRowWidth);
-      //iteartes through columns and formulates edges
+      //iterates through columns and formulates edges
       for (int col = 0; col < width; col++) {
         this.grid.get(row).get(col).appendHalfEdges(edges, vertBias, horzBias);
       }
@@ -831,7 +833,7 @@ abstract class AMaze {
         representatives.put(t, t);
       }
     }
-    //provess all edges in maze and formulates MST
+    //Iterates through all of the edges and checks their representatives to create the MST
     while (!edges.isEmpty()) {
       Edge currEdge = edges.remove(0);
       if (!currEdge.sameReps(representatives)) {
@@ -932,6 +934,7 @@ abstract class AMaze {
     this.seenList.clear();
     this.leftHand = "a";
     this.hasWon = false;
+    // Iterates through every tile in the grid
     for (ArrayList<ATile> row : this.grid) {
       for (ATile tile : row) {
         tile.resetVistStatus();
@@ -988,6 +991,7 @@ abstract class AMaze {
         heatSeenList.add(0, curr);
       }
     }
+    // Iterate through every tile in the grid and set the appropriate heat
     for (ArrayList<ATile> row : this.grid) {
       for (ATile tile : row) {
         int blueValue = (int) (255.0 * heatMap.get(tile) / maxHeat);
@@ -999,6 +1003,7 @@ abstract class AMaze {
   
   // Finds the solution path for this AMaze
   void findPath() {
+    // Iterates through until the solution path is found
     while (!this.won()) {
       this.stickLeftTick();
     }
@@ -1159,14 +1164,15 @@ class HexMaze extends AMaze {
   //renders this HexMaze as a WorldImage
   WorldImage render() {
     WorldImage img = new EmptyImage();
-    //iterates thrugh the tiles in the first row
+    //iterates through and draws the tiles in the first row
     for (ATile t : this.grid.get(0)) {
       img = new BesideImage(img, t.render(this.tileSize, this.heatMode, this.showPath));
     }
-    //iterates through the tiles in the grid
+    //iterates through and draws each row of the grid, adding it to the overall image
     for (int row = 1; row < this.grid.size(); row ++) {
       WorldImage rowImg = new EmptyImage();
       ArrayList<ATile> rowTiles = this.grid.get(row);
+      // Iterates through and draws the tiles in the row
       for (ATile t : rowTiles) {
         rowImg = new BesideImage(rowImg, t.render(this.tileSize, this.heatMode, this.showPath));
       }
@@ -1528,6 +1534,7 @@ class Game extends World {
           if (this.showConstruction && this.maze.inConstruction()) {
             this.maze.breakFirstWall();
           } else {
+            // If the maze is in construction and the user doesn't want to see it, construct the whole maze in this tick
             while (this.maze.inConstruction()) {
               this.maze.breakFirstWall();
             }
