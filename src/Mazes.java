@@ -16,8 +16,8 @@ abstract class ATile implements ITile {
   protected final Color tileColor;
   //Not final because heatColor changes depending on whether it is measured from the start or end
   protected Color heatColor;
-  //Not final because all tiles start out neither visited nor visiting, and update to true as the user
-  // or search algorithm process them
+  //Not final because all tiles start out neither visited nor visiting, and update to true as 
+  //the user or search algorithm process them
   protected boolean visited;
   protected boolean visiting;
   
@@ -66,7 +66,8 @@ abstract class ATile implements ITile {
     this.visiting = true;
   }
 
-  //mutates this ATile's visiting field to false, and visited field to true, to show that it has been processed.
+  //mutates this ATile's visiting field to false, and visited field to true,
+  //to show that it has been processed.
   void moveFrom() { 
     this.visiting = false;
     this.visited = true;
@@ -88,16 +89,18 @@ abstract class ATile implements ITile {
   // Returns an ArrayList<ATile> containing this tile's neighbors that are not separated by a wall
   abstract ArrayList<ATile> accessibleNeighbors();
   
-  // Assigns this tile's neighbors to be the neighboring indices of the given grid, at the given position
+  // Assigns this tile's neighbors to be the neighboring indices of the given grid,
+  // at the given position
   abstract void assignNeighbors(ArrayList<ArrayList<ATile>> grid, int rowPos, int colPos);
   
-  // Appends half of this tile's neighbors as edges to the given ArrayList, width the edges created in accordance
-  // with the given bias. The edges created represent the lower and right neighbors of this tile
+  // Appends half of this tile's neighbors as edges to the given ArrayList, width the edges created
+  // in accordance with the given bias. The edges created represent the lower and right neighbors
+  // of this tile
   abstract void appendHalfEdges(ArrayList<Edge> edges, boolean vertBias, boolean horzBias);
 }
 
 // Represents a tile in a Rectangular maze
-class RectTile extends ATile{
+class RectTile extends ATile {
   //these fields are not final because we need to break them when making the maze
   private boolean upWall;
   private boolean downWall;
@@ -301,7 +304,8 @@ class RectTile extends ATile{
     return neighbors;
   }
   
-  // Assigns this tile's neighbors to be the neighboring indices of the given grid, at the given position
+  // Assigns this tile's neighbors to be the neighboring indices of the given grid,
+  // at the given position
   void assignNeighbors(ArrayList<ArrayList<ATile>> grid, int rowPos, int colPos) {
     if (rowPos != 0) {
       this.setUp(grid.get(rowPos - 1).get(colPos));
@@ -330,10 +334,10 @@ class RectTile extends ATile{
 }
 
 //represents a tile in a Hexagonal maze
-class HexTile extends ATile{
+class HexTile extends ATile {
   
   //these fields are not final because they need to be broken for maze creation
-  private boolean leftWall;;
+  private boolean leftWall;
   private boolean rightWall;
   private boolean rightUpWall;
   private boolean rightDownWall;
@@ -450,7 +454,7 @@ class HexTile extends ATile{
     WorldImage tile = new RotateImage(new OverlayImage(innerTile, walls), 90);
     WorldImage vertRect = new RectangleImage(sideLength - 4,
         (int)((sideLength - 2) * Math.sqrt(3)), "solid", renderColor);
-    WorldImage horzRect =new RotateImage(vertRect, 90);
+    WorldImage horzRect = new RotateImage(vertRect, 90);
     WorldImage topLeft = new RotateImage(vertRect, -30);
     WorldImage topRight = new RotateImage(vertRect, 30);
     if (!this.rightWall) {
@@ -460,16 +464,20 @@ class HexTile extends ATile{
       tile = new OverlayOffsetImage(horzRect, 2.5, 0, tile);
     }
     if (!this.rightUpWall) {
-      tile = new OverlayOffsetImage(topRight, 1.5 * Math.cos(Math.PI / 3) - 1, 1.5 * Math.sin(Math.PI / 3) + 0.5, tile);
+      tile = new OverlayOffsetImage(topRight, 1.5 * Math.cos(Math.PI / 3) - 1, 
+          1.5 * Math.sin(Math.PI / 3) + 0.5, tile);
     }
     if (!this.rightDownWall) {
-      tile = new OverlayOffsetImage(topLeft, 1.5 * Math.cos(Math.PI / 3) - 2, -1.5 * Math.sin(Math.PI / 3) - 1, tile);
+      tile = new OverlayOffsetImage(topLeft, 1.5 * Math.cos(Math.PI / 3) - 2,
+          -1.5 * Math.sin(Math.PI / 3) - 1, tile);
     }
     if (!this.leftUpWall) {
-      tile = new OverlayOffsetImage(topLeft, -1.5 * Math.cos(Math.PI / 3) + 0.5, 1.5 * Math.sin(Math.PI / 3) + 0.5, tile);
+      tile = new OverlayOffsetImage(topLeft, -1.5 * Math.cos(Math.PI / 3) + 0.5,
+          1.5 * Math.sin(Math.PI / 3) + 0.5, tile);
     }
     if (!this.leftDownWall) {
-      tile = new OverlayOffsetImage(topRight, -1.5 * Math.cos(Math.PI / 3) + 1.5, -1.5 * Math.sin(Math.PI / 3) - 0.5, tile);
+      tile = new OverlayOffsetImage(topRight, -1.5 * Math.cos(Math.PI / 3) + 1.5,
+          -1.5 * Math.sin(Math.PI / 3) - 0.5, tile);
     }
     return tile;
   }
@@ -599,7 +607,8 @@ class HexTile extends ATile{
     return neighbors;
   }
   
-  // Assigns this tile's neighbors to be the neighboring indices of the given grid, at the given position
+  // Assigns this tile's neighbors to be the neighboring indices of the given grid,
+  // at the given position
   void assignNeighbors(ArrayList<ArrayList<ATile>> grid, int rowPos, int colPos) {
     if (colPos != 0) {
       this.setLeft(grid.get(rowPos).get(colPos - 1));
@@ -607,7 +616,8 @@ class HexTile extends ATile{
     if (colPos != grid.get(rowPos).size() - 1) {
       this.setRight(grid.get(rowPos).get(colPos + 1));
     }
-    if (rowPos != 0 && (colPos != grid.get(rowPos).size() - 1 || rowPos >= grid.get(0).size())) {
+    if (rowPos != 0 &&
+        (colPos != grid.get(rowPos).size() - 1 || rowPos >= grid.get(0).size())) {
       if (rowPos < grid.get(0).size()) {
         this.setRightUp(grid.get(rowPos - 1).get(colPos));
       } else {
@@ -621,7 +631,8 @@ class HexTile extends ATile{
         this.setLeftUp(grid.get(rowPos - 1).get(colPos));
       }
     }
-    if (rowPos != grid.size() - 1 && (colPos != grid.get(rowPos).size() - 1 || rowPos < grid.get(0).size() - 1)) {
+    if (rowPos != grid.size() - 1 &&
+        (colPos != grid.get(rowPos).size() - 1 || rowPos < grid.get(0).size() - 1)) {
       if (rowPos >= grid.get(0).size() - 1) {
         this.setRightDown(grid.get(rowPos + 1).get(colPos));
       } else {
@@ -735,10 +746,12 @@ abstract class AMaze {
   protected final int tileSize;
   //changes when the maze has been solved
   private boolean hasWon;
-  //the x and y positions are changing with the current position, and are needed in subclasses for moving
+  //the x and y positions are changing with the current position,
+  //and are needed in subclasses for moving
   protected int colPos;
   protected int rowPos;
-  // Not final because it starts as true and swaps to false once all the walls have been knocked down
+  // Not final because it starts as true and swaps to false
+  // once all the walls have been knocked down
   private boolean inConstruction;
   // Not final because the user can choose whether to display heat or paths.
   // Protected because both are needed in subclasses for rendering
@@ -750,7 +763,8 @@ abstract class AMaze {
   
   // Creates an AMaze of the given size with the given biases, using the provided TileUtils for
   // calculating row width and generating the appropriate tiles
-  AMaze(TileUtils utils, int height, int firstRowWidth, int tileSize, boolean vertBias, boolean horzBias) {
+  AMaze(TileUtils utils, int height, int firstRowWidth, int tileSize,
+      boolean vertBias, boolean horzBias) {
     this.utils = utils;
     this.height = height;
     this.tileSize = tileSize;
@@ -784,11 +798,11 @@ abstract class AMaze {
       for (int col = 0; col < width; col++) {
         ATile tile;
         if (row == 0 && col == 0) {
-          tile = utils.generateTile(new Color(31, 128, 70));
+          tile = this.utils.generateTile(new Color(31, 128, 70));
         } else if (row == this.height - 1 && col == width - 1) {
-          tile = utils.generateTile(new Color(106, 34, 128));
+          tile = this.utils.generateTile(new Color(106, 34, 128));
         } else {
-          tile = utils.generateTile();
+          tile = this.utils.generateTile();
         }
         acc.add(tile);
       }
@@ -806,7 +820,8 @@ abstract class AMaze {
     return tiles;
   }
   
-  // Returns an ArrayList with all possible edges between tiles in the grid, with the given weight biases
+  // Returns an ArrayList with all possible edges between tiles in the grid,
+  // with the given weight biases
   private ArrayList<Edge> getEdges(boolean vertBias, boolean horzBias) {
     ArrayList<Edge> edges = new ArrayList<Edge>();
     //iterates through rows
@@ -869,34 +884,18 @@ abstract class AMaze {
     }
   }
   
-  //Moves from the current position in the given direction if possible, by the given amounts
-  void move(String dir, int dcol, int drow) {
-    if (this.grid.get(this.rowPos).get(this.colPos).canMove(dir)) {
-      ATile oldTile = this.grid.get(this.rowPos).get(this.colPos);
-      this.colPos += dcol;
-      this.rowPos += drow;
-      ATile newTile = this.grid.get(this.rowPos).get(this.colPos);
-      oldTile.moveFrom();
-      newTile.moveTo();
-      if (this.solutionPath.size() > 1 && this.solutionPath.get(1).equals(newTile)) {
-        this.solutionPath.remove(0);
-      } else {
-        solutionPath.add(0, newTile);
-      }
-    }
-  }
-  
   //One tick of traversal of this AMaze, depth first
   void dfsTick() {
     if (!this.workList.isEmpty()) {
-      ATile curr = workList.remove(0);
-      if (curr == this.grid.get(this.grid.size() - 1).get(this.grid.get(this.grid.size() - 1).size() - 1)) {
+      ATile curr = this.workList.remove(0);
+      if (curr == this.grid.get(this.grid.size() - 1)
+          .get(this.grid.get(this.grid.size() - 1).size() - 1)) {
         this.hasWon = true;
         curr.moveTo();
         if (!this.seenList.isEmpty()) {
           this.seenList.get(0).moveFrom();
         }
-      } else if(this.seenList.contains(curr)){
+      } else if (this.seenList.contains(curr)) {
         this.dfsTick();
       } else {
         curr.moveTo();
@@ -915,14 +914,15 @@ abstract class AMaze {
   //One tick of traversal of this AMaze, breadth first
   void bfsTick() {
     if (!this.workList.isEmpty()) {
-      ATile curr = workList.remove(0);
-      if (curr == this.grid.get(this.grid.size() - 1).get(this.grid.get(this.grid.size() - 1).size() - 1)) {
+      ATile curr = this.workList.remove(0);
+      if (curr == this.grid.get(this.grid.size() - 1)
+          .get(this.grid.get(this.grid.size() - 1).size() - 1)) {
         this.hasWon = true;
         curr.moveTo();
         if (!this.seenList.isEmpty()) {
           this.seenList.get(0).moveFrom();
         }
-      } else if(this.seenList.contains(curr)) {
+      } else if (this.seenList.contains(curr)) {
         this.bfsTick();
       } else {
         curr.moveTo();
@@ -943,7 +943,7 @@ abstract class AMaze {
   void assignHeats(boolean startFromExit) {
     ATile startTile;
     if (startFromExit) {
-      startTile = this.grid.get(height - 1).get(this.firstRowWidth - 1);
+      startTile = this.grid.get(this.height - 1).get(this.firstRowWidth - 1);
     } else {
       startTile = this.grid.get(0).get(0);
     }
@@ -1020,11 +1020,28 @@ abstract class AMaze {
     this.grid.get(0).get(0).moveTo();
   }
   
-  //Renders this AMaze as a WorldImage
-  abstract WorldImage render();
-
+  //Moves from the current position in the given direction if possible, by the given amounts
+  void move(String dir, int dcol, int drow) {
+    if (this.grid.get(this.rowPos).get(this.colPos).canMove(dir)) {
+      ATile oldTile = this.grid.get(this.rowPos).get(this.colPos);
+      this.colPos += dcol;
+      this.rowPos += drow;
+      ATile newTile = this.grid.get(this.rowPos).get(this.colPos);
+      oldTile.moveFrom();
+      newTile.moveTo();
+      if (this.solutionPath.size() > 1 && this.solutionPath.get(1).equals(newTile)) {
+        this.solutionPath.remove(0);
+      } else {
+        this.solutionPath.add(0, newTile);
+      }
+    }
+  }
+  
   //moves from the current tile in a given direction, if possible
   abstract void move(String s);
+  
+  //Renders this AMaze as a WorldImage
+  abstract WorldImage render();
 
   //traverses this maze by sticking to the leftHand wall
   abstract void stickLeftTick();
@@ -1097,7 +1114,7 @@ class RectMaze extends AMaze {
   
   //traverses this RectMaze by sticking to the leftHand wall
   void stickLeftTick() {
-    ATile currTile = this.grid.get(rowPos).get(colPos);
+    ATile currTile = this.grid.get(this.rowPos).get(this.colPos);
     if (currTile.canMove(this.leftHand)) {
       this.move(this.leftHand);
       this.rotateLeft();
@@ -1123,7 +1140,7 @@ class RectMaze extends AMaze {
         this.leftHand = "a";
         break;
       default:
-        throw new IllegalArgumentException("Invalid direction: " + leftHand);
+        throw new IllegalArgumentException("Invalid direction: " + this.leftHand);
     }
   }
 
@@ -1143,7 +1160,7 @@ class RectMaze extends AMaze {
         this.leftHand = "d";
         break;
       default:
-        throw new IllegalArgumentException("Invalid direction: " + leftHand);
+        throw new IllegalArgumentException("Invalid direction: " + this.leftHand);
     }
   }
 
@@ -1191,7 +1208,7 @@ class HexMaze extends AMaze {
     boolean validDirection;
     int maxRows = this.sideLength * 2 - 1;
     int maxCols;
-    if (rowPos < this.sideLength) {
+    if (this.rowPos < this.sideLength) {
       maxCols = this.sideLength + rowPos;
     } else {
       maxCols = 3 * this.sideLength - 2 - rowPos;
@@ -1207,8 +1224,9 @@ class HexMaze extends AMaze {
         break;
       case "e":
         validDirection = true;
-        if (rowPos != 0 && (colPos != maxCols - 1 || rowPos >= this.sideLength)) {
-          if (rowPos < this.sideLength) {
+        if (this.rowPos != 0 &&
+            (this.colPos != maxCols - 1 || this.rowPos >= this.sideLength)) {
+          if (this.rowPos < this.sideLength) {
             drow--;
           } else {
             drow--;
@@ -1218,8 +1236,9 @@ class HexMaze extends AMaze {
         break;
       case "x":
         validDirection = true;
-        if (rowPos != maxRows - 1 && (colPos != maxCols - 1 || rowPos < this.sideLength - 1)) {
-          if (rowPos >= this.sideLength - 1) {
+        if (this.rowPos != maxRows - 1 &&
+            (this.colPos != maxCols - 1 || this.rowPos < this.sideLength - 1)) {
+          if (this.rowPos >= this.sideLength - 1) {
             drow++;
           } else {
             drow++;
@@ -1229,8 +1248,9 @@ class HexMaze extends AMaze {
         break;
       case "w":
         validDirection = true;
-        if (rowPos != 0 && (colPos != 0 || rowPos >= this.sideLength)) {
-          if (rowPos < this.sideLength) {
+        if (this.rowPos != 0 &&
+            (this.colPos != 0 || this.rowPos >= this.sideLength)) {
+          if (this.rowPos < this.sideLength) {
             drow--;
             dcol--;
           } else {
@@ -1240,8 +1260,9 @@ class HexMaze extends AMaze {
         break;
       case "z":
         validDirection = true;
-        if (rowPos != maxRows - 1 && (colPos != 0 || rowPos < this.sideLength - 1)) {
-          if (rowPos >= this.sideLength - 1) {
+        if (this.rowPos != maxRows - 1 &&
+            (this.colPos != 0 || this.rowPos < this.sideLength - 1)) {
+          if (this.rowPos >= this.sideLength - 1) {
             drow++;
             dcol--;
           } else {
@@ -1260,7 +1281,7 @@ class HexMaze extends AMaze {
 
   //traverses this HexMaze by sticking to the leftHand wall
   void stickLeftTick() {
-    ATile currTile = this.grid.get(rowPos).get(colPos);
+    ATile currTile = this.grid.get(this.rowPos).get(this.colPos);
     if (currTile.canMove(this.leftHand)) {
       this.move(this.leftHand);
       this.rotateLeft();
@@ -1293,7 +1314,7 @@ class HexMaze extends AMaze {
         this.leftHand = "a";
         break;
       default:
-        throw new IllegalArgumentException("Invalid direction: " + leftHand);
+        throw new IllegalArgumentException("Invalid direction: " + this.leftHand);
     }
   }
 
@@ -1319,7 +1340,7 @@ class HexMaze extends AMaze {
         this.leftHand = "e";
         break;
       default:
-        throw new IllegalArgumentException("Invalid direction: " + leftHand);
+        throw new IllegalArgumentException("Invalid direction: " + this.leftHand);
     }
   }
 }
@@ -1327,7 +1348,8 @@ class HexMaze extends AMaze {
 // Utility methods for mazes of different tiles types
 abstract class TileUtils {
   
-  // Calculates the width of a row in a maze based off of its index number and the length of the first row
+  // Calculates the width of a row in a maze
+  // based off of its index number and the length of the first row
   abstract Integer calculateWidth(Integer currRow, Integer firstRowLength);
   
   // Generates a Tile of the given color
@@ -1359,15 +1381,17 @@ class RectUtils extends TileUtils {
 // Utility methods for HexMazes
 class HexUtils extends TileUtils {
   
-  // Calculates the width of a row in a HexMaze based off of its index number and the length of the first row
+  // Calculates the width of a row in a HexMaze
+  // based off of its index number and the length of the first row
   Integer calculateWidth(Integer currRow, Integer firstRowLength) {
     int rowLength;
     if (currRow < firstRowLength) {
       rowLength = firstRowLength + currRow;
-    } else if (currRow < 2 * firstRowLength - 1){
+    } else if (currRow < 2 * firstRowLength - 1) {
       rowLength = 3 * firstRowLength - 2 - currRow;
     } else {
-      throw new IllegalArgumentException("currRow (" + currRow + ") out of bounds for sideLength (" + firstRowLength + ")");
+      throw new IllegalArgumentException(
+          "currRow (" + currRow + ") out of bounds for sideLength (" + firstRowLength + ")");
     }
     return rowLength;
   }
@@ -1386,8 +1410,8 @@ class HexUtils extends TileUtils {
 //represents the game of solving mazes
 class Game extends World {
   
-  // None of the fields are final as they are all subject to change based on user input
-  // e.g. creating a new maze of a different size, toggling the paths and heat, pausing the game, etc.
+  // None of the fields are final as they are all subject to change based on user input, e.g.
+  // creating a new maze of a different size, toggling the paths and heat, pausing the game, etc.
   private AMaze maze;
   private int tileSize;
   private boolean paused;
@@ -1442,23 +1466,23 @@ class Game extends World {
   // See UserGuide.txt for detailed info on how to play the game
   public void onKeyEvent(String key) {
     switch (key) {
-    case " ":
-      this.paused = !this.paused;
-      break;
-    case "c":
-      this.showConstruction = !this.showConstruction;
-      break;
-    case "k":
-      this.vertBias = !this.vertBias;
-      break;
-    case "K":
-      this.horzBias = !this.horzBias;
-      break;
-    case "n":
-      this.newRandomMaze();
-      break;
-    default:
-      break;
+      case " ":
+        this.paused = !this.paused;
+        break;
+      case "c":
+        this.showConstruction = !this.showConstruction;
+        break;
+      case "k":
+        this.vertBias = !this.vertBias;
+        break;
+      case "K":
+        this.horzBias = !this.horzBias;
+        break;
+      case "n":
+        this.newRandomMaze();
+        break;
+      default:
+        break;
     }
     if (!this.tickMode.equals("construction")) {
       switch (key) {
@@ -1526,7 +1550,8 @@ class Game extends World {
     }
   }
 
-  // Updates the game each tick, based on whether it has been won, is in construction, and the Game's tickMode
+  // Updates the game each tick,
+  // based on whether it has been won, is in construction, and the Game's tickMode
   public void onTick() {
     if (!this.paused) { 
       if (this.maze.won()) {
@@ -1537,7 +1562,8 @@ class Game extends World {
           if (this.showConstruction && this.maze.inConstruction()) {
             this.maze.breakFirstWall();
           } else {
-            // If the maze is in construction and the user doesn't want to see it, construct the whole maze in this tick
+            // If the maze is in construction and the user doesn't want to see it,
+            // construct the whole maze in this tick
             while (this.maze.inConstruction()) {
               this.maze.breakFirstWall();
             }
@@ -1585,11 +1611,13 @@ class Game extends World {
 // Examples and tests
 class ExamplesMazes {
   Game m = new Game();
-
-//  void testBigBang(Tester t) {
-//    m.bigBang(1500, 800, 0.0000001);
-//  }
-
+  
+  /*
+  void testBigBang(Tester t) {
+    m.bigBang(1500, 800, 0.0000001);
+  }
+  */
+  
   boolean testATileAndEdge(Tester t) {
     ATile middle = new RectTile();
     ATile left = new RectTile(Color.RED);
@@ -1893,7 +1921,8 @@ class ExamplesMazes {
     boolean testHexWidth = t.checkExpect(hu.calculateWidth(0, 7), 7)
         && t.checkExpect(hu.calculateWidth(3, 17), 20)
         && t.checkExpect(hu.calculateWidth(44, 26), 32)
-        && t.checkException(new IllegalArgumentException("currRow (10) out of bounds for sideLength (5)"),
+        && t.checkException(
+            new IllegalArgumentException("currRow (10) out of bounds for sideLength (5)"),
             hu, "calculateWidth", 10, 5);
     
     boolean testTileGen = t.checkExpect(ru.generateTile(), new RectTile())
@@ -1901,7 +1930,8 @@ class ExamplesMazes {
         && t.checkExpect(ru.generateTile(Color.BLUE), new RectTile(Color.BLUE))
         && t.checkExpect(ru.generateTile(new Color(1, 2, 3)), new RectTile(new Color(1, 2, 3)))
         && t.checkExpect(hu.generateTile(Color.RED), new HexTile(Color.RED))
-        && t.checkExpect(hu.generateTile(new Color(110, 220, 233)), new HexTile(new Color(110, 220, 233)));
+        && t.checkExpect(hu.generateTile(new Color(110, 220, 233)),
+            new HexTile(new Color(110, 220, 233)));
     
     return testRectWidth && testHexWidth && testTileGen;
   }
