@@ -1364,8 +1364,10 @@ class HexUtils extends TileUtils {
     int rowLength;
     if (currRow < firstRowLength) {
       rowLength = firstRowLength + currRow;
-    } else {
+    } else if (currRow < 2 * currRow - 1){
       rowLength = 3 * firstRowLength - 2 - currRow;
+    } else {
+      throw new IllegalArgumentException("currRow (" + currRow + ") out of bounds for sideLength (" + firstRowLength + ")");
     }
     return rowLength;
   }
@@ -1437,6 +1439,7 @@ class Game extends World {
   }
 
   //moves the current tile based on a key command
+  // See UserGuide.txt for detailed info on how to play the game
   public void onKeyEvent(String key) {
     switch (key) {
     case " ":
@@ -1584,7 +1587,7 @@ class ExamplesMazes {
   Game m = new Game();
 
   void testBigBang(Tester t) {
-    m.bigBang(1500, 800, 0.00001);
+    m.bigBang(1500, 800, 0.0000001);
   }
 
   boolean testATileAndEdge(Tester t) {
@@ -1862,7 +1865,7 @@ class ExamplesMazes {
 
     return testSetandBreakByCanMove && testExceptions && testAccessibleNeighbors;
   }
-
+  
   boolean testRectMazes(Tester t) {
     AMaze unbiasedRectMaze = new RectMaze(3, 3, 40, false, false);
     AMaze vertBiasedRectMaze = new RectMaze(2, 2, 10, true, false);
@@ -1878,6 +1881,21 @@ class ExamplesMazes {
     AMaze horzBiasedHexMaze = new HexMaze(4, 5, false, true);
 
     return true;
+  }
+  
+  boolean testTileUtils(Tester t) {
+    TileUtils ru = new RectUtils();
+    TileUtils hu = new HexUtils();
+    
+    boolean testRectWidth = t.checkExpect(ru.calculateWidth(0, 9), 9)
+        && t.checkExpect(ru.calculateWidth(3, 17), 17)
+        && t.checkExpect(ru.calculateWidth(44, 26), 26);
+    
+    boolean testHexWidth = t.checkExpect(hu.calculateWidth(0, 7), 7)
+        && t.checkExpect(hu.calculateWidth(3, 17), 20)
+        && t.checkExpect(hu.calculateWidth(44, 26), 32);
+    
+    return testRectWidth && testHexWidth;
   }
 
 }
