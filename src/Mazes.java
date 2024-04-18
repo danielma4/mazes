@@ -1608,7 +1608,7 @@ class Game extends World {
   }
   
   // Checks whether the provided value is equal to the field of the provided name.
-  // This method is for testing purposes only.
+  // This method is for testing purposes only, not for use in any actual maze logic.
   <T> boolean checkField(String field, T value) {
     switch (field) {
       case "paused":
