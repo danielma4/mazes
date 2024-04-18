@@ -1,0 +1,36 @@
+To play the game, make sure that the testBigBanf method is uncommented and run the program. A random maze will be automatically generated.
+User controls:
+  • Press " " (spacebar) at any time to pause and unpause the game (unpaused by default)
+  • Press "c" at any time to toggle showing the construction of mazes (construction shown by default)
+  • Press "k" at any time to toggle vertical bias in maze creation (no bias by default)
+  • Press "K" at any time to toggle horizontal bias in maze creation (no bias by default)
+    - Note that toggling both vertical and horizontal bias in maze creation will result in no visible bias,
+      so untoggling one will result in a bias towards the other.
+  • Press "n" at any time to generate a new random maze.
+    - Note that generating a new maze also resets tickMode, heatMap rendering, and visited tile rendering to defaults
+  • Press "p" once the maze has finished being constructed to toggle showing visited tiles (visited tiles shown by default)
+  • Press "r" once the maze has finished being constructed to restart solving the maze from the topLeft tile.
+    - If the maze was won when the key was pressed, the maze will be set to manual solving. Otherwise, it will
+      keep using whatever algorithm it was using
+  • Press "h" once the maze has finished being constructed to toggle showing the "start heat" (distance a tile is from the start of the start of the maze)
+  • Press "H" once the maze has finished being constructed to toggle showing the "exit heat" (distance a tile is from the start of the exit of the maze)
+    - Note that for both heatMaps, blue is closer to the tile being measured from, and red is further away. Heatmaps are disabled by default.
+  • Press "M" once the maze has finished being constructed to set the maze to be solved manually (set to manual by default)
+  • Press "D" once the maze has finished being constructed to set the maze to be solved depth-first (set to manual by default)
+  • Press "B" once the maze has finished being constructed to set the maze to be solved breadth-first (set to manual by default)
+  • Press "L" once the maze has finished being constructed to set the maze to be solved by sticking to the left-hand wall (set to manual by default)
+    - Note that swapping the mode of solving will also restart the maze to be solved from the upper-left corner
+  • Pressing other keys once the maze has finished being constructed will attempt to move the tile, if the mode is set to manual and the game is not paused
+    - For Rectangular mazes:
+      • 'a' moves to the left
+      • 'd' moves to the right
+      • 'w' moves to the up
+      • 's' moves to the down
+    - For Hexagonal mazes:
+      • 'a' moves to the left
+      • 'd' moves to the right
+      • 'e' moves to the upper right diagonal
+      • 'w' moves to the upper left diagonal
+      • 'x' moves to the lower right diagonal
+      • 'z' moves to the lower left diagonal
+    - No movement for any type of maze can go through a wall.
