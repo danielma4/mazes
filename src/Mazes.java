@@ -1553,7 +1553,7 @@ class Game extends World {
   // Updates the game each tick,
   // based on whether it has been won, is in construction, and the Game's tickMode
   public void onTick() {
-    if (!this.paused) { 
+    if (!this.paused) {
       if (this.maze.won()) {
         this.tickMode = "won";
       }
@@ -1605,6 +1605,29 @@ class Game extends World {
     }
     this.tickMode = "construction";
     this.renderMode = "normal";
+  }
+  
+  // Checks whether the provided value is equal to the field of the provided name.
+  // This method is for testing purposes only.
+  <T> boolean checkField(String field, T value) {
+    switch (field) {
+      case "paused":
+        return value.equals(this.paused);
+      case "renderMode":
+        return value.equals(this.renderMode);
+      case "tickMode":
+        return value.equals(this.tickMode);
+      case "showConstruction":
+        return value.equals(this.showConstruction);
+      case "vertBias":
+        return value.equals(this.vertBias);
+      case "horzBias":
+        return value.equals(this.horzBias);
+      case "tileSize":
+        return value.equals(this.tileSize);
+      default:
+        throw new IllegalArgumentException("Not a field: " + field);
+    }
   }
 }
 
@@ -1934,6 +1957,155 @@ class ExamplesMazes {
             new HexTile(new Color(110, 220, 233)));
     
     return testRectWidth && testHexWidth && testTileGen;
+  }
+  
+  boolean testGame(Tester t) {
+    Game g1 = new Game();
+    boolean init = t.checkExpect(g1.checkField("paused", false), true)
+        && t.checkExpect(g1.checkField("renderMode", "normal"), true)
+        && t.checkExpect(g1.checkField("tickMode", "construction"), true)
+        && t.checkExpect(g1.checkField("showConstruction", true), true)
+        && t.checkExpect(g1.checkField("vertBias", false), true)
+        && t.checkExpect(g1.checkField("horzBias", false), true);
+    
+    g1.onKeyEvent(" ");
+    
+    boolean paused = t.checkExpect(g1.checkField("paused", true), true)
+        && t.checkExpect(g1.checkField("renderMode", "normal"), true)
+        && t.checkExpect(g1.checkField("tickMode", "construction"), true)
+        && t.checkExpect(g1.checkField("showConstruction", true), true)
+        && t.checkExpect(g1.checkField("vertBias", false), true)
+        && t.checkExpect(g1.checkField("horzBias", false), true);
+    
+    g1.onKeyEvent("k");
+    g1.onKeyEvent("H");
+    g1.onKeyEvent("c");
+    g1.onKeyEvent("B");
+    
+    boolean keysWhilePausedConstructing = t.checkExpect(g1.checkField("paused", true), true)
+        && t.checkExpect(g1.checkField("renderMode", "normal"), true)
+        && t.checkExpect(g1.checkField("tickMode", "construction"), true)
+        && t.checkExpect(g1.checkField("showConstruction", false), true)
+        && t.checkExpect(g1.checkField("vertBias", true), true)
+        && t.checkExpect(g1.checkField("horzBias", false), true);
+    
+    g1.onKeyEvent(" ");
+    g1.onKeyEvent("k");
+    g1.onKeyEvent("K");
+    g1.onKeyEvent("H");
+    g1.onKeyEvent("d");
+    g1.onKeyEvent("B");
+    
+
+    boolean keysWhileUnpausedConstructing = t.checkExpect(g1.checkField("paused", false), true)
+        && t.checkExpect(g1.checkField("renderMode", "normal"), true)
+        && t.checkExpect(g1.checkField("tickMode", "construction"), true)
+        && t.checkExpect(g1.checkField("showConstruction", false), true)
+        && t.checkExpect(g1.checkField("vertBias", false), true)
+        && t.checkExpect(g1.checkField("horzBias", true), true);
+    
+    g1.onTick();
+    
+    boolean finishedConstructing = t.checkExpect(g1.checkField("paused", false), true)
+        && t.checkExpect(g1.checkField("renderMode", "normal"), true)
+        && t.checkExpect(g1.checkField("showConstruction", false), true)
+        && t.checkExpect(g1.checkField("vertBias", false), true)
+        && t.checkExpect(g1.checkField("horzBias", true), true);
+    
+    if (g1.checkField("tileSize", 250)) {
+      finishedConstructing = finishedConstructing
+          && t.checkExpect(g1.checkField("tickMode", "won"), true);
+    } else {
+      finishedConstructing = finishedConstructing
+          && t.checkExpect(g1.checkField("tickMode", "manual"), true);
+    }
+    
+    g1.onKeyEvent("k");
+    g1.onKeyEvent("H");
+    g1.onKeyEvent("c");
+    g1.onKeyEvent("B");
+    
+    boolean keysWhileUnpausedNotConstructing = t.checkExpect(g1.checkField("paused", false), true)
+        && t.checkExpect(g1.checkField("renderMode", "exit heat map"), true)
+        && t.checkExpect(g1.checkField("tickMode", "bfs"), true)
+        && t.checkExpect(g1.checkField("showConstruction", true), true)
+        && t.checkExpect(g1.checkField("vertBias", true), true)
+        && t.checkExpect(g1.checkField("horzBias", true), true);
+    
+    g1.onKeyEvent("n");
+    
+    boolean checkNewMaze = t.checkExpect(g1.checkField("paused", false), true)
+        && t.checkExpect(g1.checkField("renderMode", "normal"), true)
+        && t.checkExpect(g1.checkField("tickMode", "construction"), true)
+        && t.checkExpect(g1.checkField("showConstruction", true), true)
+        && t.checkExpect(g1.checkField("vertBias", true), true)
+        && t.checkExpect(g1.checkField("horzBias", true), true);
+    
+    g1.onTick();
+    
+    boolean checkConstructionTick = t.checkExpect(g1.checkField("paused", false), true)
+        && t.checkExpect(g1.checkField("renderMode", "normal"), true)
+        && t.checkExpect(g1.checkField("showConstruction", true), true)
+        && t.checkExpect(g1.checkField("vertBias", true), true)
+        && t.checkExpect(g1.checkField("horzBias", true), true);
+    
+    if (g1.checkField("tileSize", 250)) {
+      finishedConstructing = finishedConstructing
+          && t.checkExpect(g1.checkField("tickMode", "won"), true);
+    } else {
+      finishedConstructing = finishedConstructing
+          && t.checkExpect(g1.checkField("tickMode", "construction"), true);
+    }
+    
+    g1.onKeyEvent("c");
+    g1.onTick();
+    g1.onKeyEvent("D");
+    g1.onKeyEvent("h");
+    
+    boolean checkGameTick = t.checkExpect(g1.checkField("paused", false), true)
+        && t.checkExpect(g1.checkField("renderMode", "start heat map"), true)
+        && t.checkExpect(g1.checkField("tickMode", "dfs"), true)
+        && t.checkExpect(g1.checkField("showConstruction", false), true)
+        && t.checkExpect(g1.checkField("vertBias", true), true)
+        && t.checkExpect(g1.checkField("horzBias", true), true);
+    
+    Game g2 = new Game(2, 2);
+    
+    boolean g2Init = t.checkExpect(g2.checkField("paused", false), true)
+        && t.checkExpect(g2.checkField("renderMode", "normal"), true)
+        && t.checkExpect(g2.checkField("tickMode", "construction"), true)
+        && t.checkExpect(g2.checkField("showConstruction", true), true)
+        && t.checkExpect(g2.checkField("vertBias", false), true)
+        && t.checkExpect(g2.checkField("horzBias", false), true);
+    
+    g2.onTick();
+    g2.onTick();
+    g2.onTick();
+    
+    boolean g2ConstructionFinished = t.checkExpect(g2.checkField("paused", false), true)
+        && t.checkExpect(g2.checkField("renderMode", "normal"), true)
+        && t.checkExpect(g2.checkField("tickMode", "manual"), true)
+        && t.checkExpect(g2.checkField("showConstruction", true), true)
+        && t.checkExpect(g2.checkField("vertBias", false), true)
+        && t.checkExpect(g2.checkField("horzBias", false), true);
+    
+    g2.onKeyEvent("L");
+    g2.onTick();
+    g2.onTick();
+    g2.onTick();
+    g2.onTick();
+    g2.onTick();
+    
+    boolean g2Won = t.checkExpect(g2.checkField("paused", false), true)
+        && t.checkExpect(g2.checkField("renderMode", "normal"), true)
+        && t.checkExpect(g2.checkField("tickMode", "won"), true)
+        && t.checkExpect(g2.checkField("showConstruction", true), true)
+        && t.checkExpect(g2.checkField("vertBias", false), true)
+        && t.checkExpect(g2.checkField("horzBias", false), true);
+    
+    return init && paused && keysWhilePausedConstructing && keysWhileUnpausedConstructing
+        && finishedConstructing && keysWhileUnpausedNotConstructing && checkNewMaze
+        && checkConstructionTick && checkGameTick && g2Init && g2ConstructionFinished;
   }
 
 }
